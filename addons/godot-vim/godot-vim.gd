@@ -27,23 +27,25 @@ var bindings = {
 	["I"]: enable_insert,
 	["Shift+I"]: insert_at_beginning_of_line,
 	["A"]: insert_after,
-	["Shift+A"]:TODO,
+	["Shift+A"]: insert_at_end_of_line,
 	["O"]: newline_insert,
 	["P"]: paste,
 	["Shift+P"]: TODO,
-	["R", "ANY"]: replace_one_character,
+	["R", "ANY"]: replace_one_character, #TODO
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
 	["D","D"]: delete_line,
 	["D", "W"]: delete_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
-	["Shift+Semicolon","W", "Enter"]: save, 
+	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working
 	["Y"]: yank,
 	["Y", "Y"]: TODO, #Yank line
 	["V"]: enter_visual_selection,
 	["Shift+V"]: enter_visual_line_selection,
-	["Slash"]: search_function, #TODO
+	["Slash"]: search_function, #TODO - Not Working
+	["Shift+Comma", "Shift+Comma"]: dedent,
+	["Shift+Period", "Shift+Period"]: indent, 
 }
 
 
@@ -66,7 +68,7 @@ func _input(event):
 		return
 	
 	var new_keys = key_event.as_text_keycode()
-	if new_keys in ["Ctrl+S", "Ctrl+F"]:
+	if new_keys in ["Ctrl+S", "Ctrl+F", "Shift+Tab"]:
 		print("Reserved")
 		return
 
@@ -176,6 +178,9 @@ func insert_at_beginning_of_line():
 	var new_pos = code_editor.get_first_non_whitespace_column(curr_line())
 	code_editor.set_caret_column(new_pos)
 	enable_insert()
+func insert_at_end_of_line():
+	code_editor.set_caret_column(99999)
+	enable_insert()
 func newline_insert():
 	code_editor.set_caret_column(99999)
 	enable_insert()
@@ -239,8 +244,10 @@ func save():
 	press_save.keycode = KEY_MASK_CTRL + KEY_S
 	press_save.pressed = true
 	Input.parse_input_event(press_save)
-
-
+func indent():
+	code_editor.indent_lines()
+func dedent():
+	code_editor.unindent_lines()
 func search_function():
 	print("Searching?")
 	var press_search = InputEventKey.new()
