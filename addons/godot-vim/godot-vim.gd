@@ -10,31 +10,46 @@ var clip_buffer : String = ""
 var editor_interface : EditorInterface
 var current_editor
 var code_editor : CodeEdit
+var select_from_line
+var select_from_column
+var visual_selection_mode : bool = false
+var comman_mode : bool = false
 var bindings = {
 	["H"]: move_left,
 	["J"]: move_down,
 	["K"]: move_up,
 	["L"]: move_right,
+	["Shift+G"]: move_to_beginning_of_file,
+	["G", "G"]: move_to_end_of_file,
 	["I"]: disable_vim,
+	["Shift+I"]: insert_at_beginning_of_line,
 	["A"]: insert_after,
 	["O"]: newline_insert,
 	["P"]: paste,
+	["X"]: delete_at_cursor,
 	["D","D"]: delete_line,
+	["D", "W"]: delete_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
-	["Shift+Semicolon","W"]: TODO,
+	["Shift+Semicolon","W"]: TODO, #save
+	["Y"]: yank,
+	["Y", "Y"]: TODO, #Yank line
+	["V"]: enter_visual_selection
 }
 
 
 func _enter_tree() -> void:
 	editor_interface = get_editor_interface()
 	script_editor = editor_interface.get_script_editor()
-	self.set_process_input(true)
 
 
 func _input(event):
 	current_editor = script_editor.get_current_editor()
+	if !current_editor:
+		return
 	code_editor = current_editor.get_base_editor() as CodeEdit
+	if !code_editor:
+		return
 	if !code_editor.has_focus(): #Don't process when no focus
 		return
 	var key_event = event as InputEventKey
@@ -51,7 +66,10 @@ func _input(event):
 		if key_event.is_pressed() and !key_event.is_echo():
 			if key_event.get_keycode_with_modifiers() == KEY_ESCAPE:
 				enable_vim()
+				visual_mode = false
 				input_buffer.clear()
+				if code_editor.has_selection():
+					code_editor.deselect()
 	
 	#Have bufferable input
 	if !input_buffer.is_empty():
@@ -59,26 +77,33 @@ func _input(event):
 
 
 func process_buffer() ->void :
-	print(input_buffer)
+
 	var valid = check_command(input_buffer)
-	if valid == 1: #Full match
+	if abs(valid) == 1: #Full match
 		input_buffer.clear()
 	elif valid == 0: #Partial match??? 
 		pass
-	elif valid == -1: #No match
-		input_buffer.clear()
 
 func check_command(command:Array) -> int:
 	if command in bindings.keys():
-		bindings[command].call()
-		return 1
+		var err = bindings[command].call()
+		if err != -1:
+			return 1
+		return 0
 	else:
 		for key in bindings.keys():
-			if command[0] in key: # TODO: Fix bugs
+			if command[0] in key: # TODO: Fix this stupid implementation
 				print("Partial match: ", command)
 				return 0
 	return -1
 
+
+
+###########################
+####  BOUND FUNCTIONS  ####
+###########################
+
+# Enabling/Disabling VIM mode
 func enable_vim():
 	set_vim_mode(true)
 func disable_vim():
@@ -90,51 +115,95 @@ func set_vim_mode(mode : bool):
 	else:
 		code_editor.caret_type = TextEdit.CARET_TYPE_LINE
 
+# Movement
+func move_to_end_of_file():
+	code_editor.set_caret_line(code_editor.get_line_count())
+	code_editor.set_caret_column(99999)
+func move_to_beginning_of_file():
+	code_editor.set_caret_column(0)
+	code_editor.set_caret_line(0)
 func move_right():
 	move_column_relative(1)
+	update_selection()
 func move_left():
 	move_column_relative(-1)
+	update_selection()
 func move_down():
 	move_line_relative(1)
+	update_selection()
 func move_up():
 	move_line_relative(-1)
+	update_selection()
+func move_column_relative(amount:int):
+	code_editor.set_caret_column(curr_column() + amount)
+func move_line_relative(amount:int):
+	code_editor.set_caret_line(curr_line() + amount)
 
+# Insertion
 func insert_after():
 	move_right()
 	disable_vim()
-	
+func insert_at_beginning_of_line():
+	var new_pos = code_editor.get_first_non_whitespace_column(curr_line())
+	code_editor.set_caret_column(new_pos)
+	disable_vim()
 func newline_insert():
 	code_editor.set_caret_column(99999)
 	disable_vim()
+	if code_editor.has_selection():
+		code_editor.deselect()
 	var enter = InputEventKey.new()
 	enter.pressed = true
 	enter.keycode = KEY_ENTER
 	Input.parse_input_event(enter)
-
-func move_column_relative(amount:int):
-	code_editor.set_caret_column(curr_column() + amount)
-
-func move_line_relative(amount:int):
-	code_editor.set_caret_line(curr_line() + amount)
-	
 func paste():
 	code_editor.paste()
 	
+# Deletion
 func delete_line():
 	select_line()
 	code_editor.cut()
+func delete_at_cursor():
+	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
+	code_editor.delete_selection()
+func delete_word():
+	code_editor.select_word_under_caret()
+	code_editor.delete_selection()
 	
+# Selection
 func select_line():
 	code_editor.select(curr_line(), 0, curr_line(), 999999)
-	
 func curr_column():
 	return code_editor.get_caret_column()
 func curr_line():
 	return code_editor.get_caret_line()
+func enter_visual_selection():
+	print("Entering visual selection?")
+	visual_mode = true
+	select_from_column = curr_column()
+	select_from_line = curr_line()
+	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
+func update_selection():
+	if visual_mode:
+		code_editor.select(select_from_line, select_from_column, curr_line(), curr_column() +1)
+
+# Other
 func undo():
 	code_editor.undo()
 func redo():
-	code_editor.redo()	
-	
-func TODO():
+	code_editor.redo()
+func save():
 	pass
+func search():
+	pass
+func copy():
+	code_editor.copy()
+func yank():
+	if !visual_mode:
+		return -1 # Way to notify we aren't done with this input
+	copy()
+	code_editor.deselect()
+func TODO():
+	print("Have to implement this function")
+	
+
