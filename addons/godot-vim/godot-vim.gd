@@ -40,7 +40,7 @@ var bindings = {
 	["Ctrl+R"]: redo,
 	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working
 	["Y"]: yank,
-	["Y", "Y"]: TODO, #Yank line
+	["Y", "Y"]: yank_line, #Yank line
 	["V"]: enter_visual_selection,
 	["Shift+V"]: enter_visual_line_selection,
 	["Slash"]: search_function, #TODO - Not Working
@@ -204,7 +204,11 @@ func delete_line():
 	select_line()
 	code_editor.cut()
 func delete_at_cursor():
-	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
+	var line_len = len(code_editor.get_line(curr_line()))
+	if line_len == curr_column():
+		code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() -1)
+	else:
+		code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
 	code_editor.delete_selection()
 func delete_word():
 	code_editor.select_word_under_caret()
@@ -212,7 +216,7 @@ func delete_word():
 	
 # Selection
 func select_line():
-	code_editor.select(curr_line(), 0, curr_line(), 999999)
+	code_editor.select(curr_line() -1, 99999, curr_line(), 999999)
 func curr_column():
 	return code_editor.get_caret_column()
 func curr_line():
@@ -254,12 +258,15 @@ func search_function():
 	press_search.keycode = KEY_MASK_CTRL + KEY_F
 	press_search.pressed = true
 	Input.parse_input_event(press_search)
-	TODO()
 func copy():
 	code_editor.copy()
 func yank():
 	if !visual_mode and !visual_line_mode:
 		return -1 # Way to notify we aren't done with this input
+	copy()
+	code_editor.deselect()
+func yank_line():
+	select_line()
 	copy()
 	code_editor.deselect()
 func TODO():
