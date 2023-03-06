@@ -8,7 +8,7 @@ var visual_mode : bool = false
 var input_buffer : Array = []
 var clip_buffer : String = ""
 var editor_interface : EditorInterface
-var current_editor
+var current_editor : ScriptEditorBase
 var code_editor : CodeEdit
 var select_from_line
 var select_from_column
@@ -31,7 +31,7 @@ var bindings = {
 	["D", "W"]: delete_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
-	["Shift+Semicolon","W"]: TODO, #save
+	["Shift+Semicolon","W", "Enter"]: save, 
 	["Y"]: yank,
 	["Y", "Y"]: TODO, #Yank line
 	["V"]: enter_visual_selection
@@ -82,21 +82,42 @@ func process_buffer() ->void :
 	if abs(valid) == 1: #Full match
 		input_buffer.clear()
 	elif valid == 0: #Partial match??? 
+		print("Spare buffer: ", input_buffer)
 		pass
 
-func check_command(command:Array) -> int:
-	if command in bindings.keys():
-		var err = bindings[command].call()
-		if err != -1:
+func check_command(commands:Array) -> int:
+	var partial = false
+	var full = false
+	var nomatch = false
+	if commands in bindings.keys():#Potential full-match
+		var err = bindings[commands].call()
+		if err != -1: # full match
+			full = true
 			return 1
+		partial = true # Our last command sent back to buffer
 		return 0
-	else:
+	else: #No immediate matches
 		for key in bindings.keys():
-			if command[0] in key: # TODO: Fix this stupid implementation
-				print("Partial match: ", command)
+#			print("Keybinding key:", key)
+			print(commands)
+			var i = commands.size()
+#			for i in commands.size(): # Iterating through each command in buffer
+			if i > key.size(): # If command buffer iteration is bigger than length of binding then skip it.
+				continue
+			var cmd = commands[i-1]
+			if cmd == key[i-1]:
+				print("\n\ncurrently matching?\n\n")
+				print("i:", i)
+				print("cmd: ", cmd)
+				partial = true
 				return 0
+			else:
+				print("i:", i)
+				print("No matchy")
+				print("cmd: ", cmd)
+				print("key: ", key[i-1])
+	# No matches at all?
 	return -1
-
 
 
 ###########################
@@ -193,6 +214,9 @@ func undo():
 func redo():
 	code_editor.redo()
 func save():
+	var saver = current_editor.get_script()
+	TODO()
+
 	pass
 func search():
 	pass
@@ -205,5 +229,3 @@ func yank():
 	code_editor.deselect()
 func TODO():
 	print("Have to implement this function")
-	
-
