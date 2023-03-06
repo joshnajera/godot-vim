@@ -1,20 +1,20 @@
 @tool
 extends EditorPlugin
 
-
 var script_editor : ScriptEditor
+var editor_interface : EditorInterface
+var scrpit_editor_base : ScriptEditorBase
+var code_editor : CodeEdit
+
 var vim_mode : bool = true
 var visual_mode : bool = false
+var visual_line_mode : bool = false
+
 var input_buffer : Array = []
 var clip_buffer : String = ""
-var editor_interface : EditorInterface
-var current_editor : ScriptEditorBase
-var code_editor : CodeEdit
 var select_from_line
 var select_from_column
-var visual_selection_mode : bool = false
-var visual_line_mode : bool = false
-var comman_mode : bool = false
+
 var bindings = {
 	["H"]: move_left,
 	["J"]: move_down,
@@ -38,7 +38,7 @@ var bindings = {
 	["D", "W"]: delete_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
-	["Shift+Semicolon","W", "Enter"]: TODO, 
+	["Shift+Semicolon","W", "Enter"]: save, 
 	["Y"]: yank,
 	["Y", "Y"]: TODO, #Yank line
 	["V"]: enter_visual_selection,
@@ -53,10 +53,10 @@ func _enter_tree() -> void:
 
 
 func _input(event):
-	current_editor = script_editor.get_current_editor()
-	if !current_editor:
+	scrpit_editor_base = script_editor.get_current_editor()
+	if !scrpit_editor_base:
 		return
-	code_editor = current_editor.get_base_editor() as CodeEdit
+	code_editor = scrpit_editor_base.get_base_editor() as CodeEdit
 	if !code_editor:
 		return
 	if !code_editor.has_focus(): #Don't process when no focus
@@ -64,22 +64,27 @@ func _input(event):
 	var key_event = event as InputEventKey
 	if key_event == null or !key_event.is_pressed(): #Don't process when not a key action
 		return
+	
+	var new_keys = key_event.as_text_keycode()
+	if new_keys in ["Ctrl+S", "Ctrl+F"]:
+		print("Reserved")
+		return
 
-	if event is InputEventKey and vim_mode and event.is_pressed(): #We are in VIM mode
-		var new_keys = key_event.as_text_keycode()
+
+	if vim_mode and event.is_pressed(): #We are in VIM mode
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
 			input_buffer.push_back(new_keys)
 		get_viewport().set_input_as_handled()
 		
-	if event is InputEventKey: #We are in insert mode
-		if key_event.is_pressed() and !key_event.is_echo():
-			if key_event.get_keycode_with_modifiers() == KEY_ESCAPE:
-				enable_vim()
-				visual_mode = false
-				visual_line_mode = false
-				input_buffer.clear()
-				if code_editor.has_selection():
-					code_editor.deselect()
+		#We are in insert mode
+	if key_event.is_pressed() and !key_event.is_echo():
+		if key_event.get_keycode_with_modifiers() == KEY_ESCAPE:
+			enable_vim()
+			visual_mode = false
+			visual_line_mode = false
+			input_buffer.clear()
+			if code_editor.has_selection():
+				code_editor.deselect()
 	
 	#Have bufferable input
 	if !input_buffer.is_empty():
@@ -93,10 +98,10 @@ func process_buffer() ->void :
 		input_buffer.clear()
 	elif valid == 0: #Partial match??? 
 		print("Spare buffer: ", input_buffer)
-		pass
 
 # Command buffer parser
 func check_command(commands:Array) -> int:
+	print(commands)
 	var partial = false
 	var full = false
 	var nomatch = false
@@ -109,7 +114,6 @@ func check_command(commands:Array) -> int:
 		return 0
 	else: #No immediate matches
 		for key in bindings.keys():
-			print(commands)
 			var i = commands.size()
 			if i > key.size(): # If command buffer iteration is bigger than length of binding then skip it.
 				continue
@@ -230,9 +234,19 @@ func undo():
 func redo():
 	code_editor.redo()
 func save():
-	var saver = current_editor.get_script()
-	TODO()
+	print("Saving?")
+	var press_save = InputEventKey.new()
+	press_save.keycode = KEY_MASK_CTRL + KEY_S
+	press_save.pressed = true
+	Input.parse_input_event(press_save)
+
+
 func search_function():
+	print("Searching?")
+	var press_search = InputEventKey.new()
+	press_search.keycode = KEY_MASK_CTRL + KEY_F
+	press_search.pressed = true
+	Input.parse_input_event(press_search)
 	TODO()
 func copy():
 	code_editor.copy()
