@@ -20,8 +20,8 @@ var bindings = {
 	["J"]: move_down,
 	["K"]: move_up,
 	["L"]: move_right,
-	["E"]: TODO, # End of word
-	["B"]: TODO, # Beginning of word
+	["E"]: scan_right, # End of word
+	["B"]: scan_left, # Beginning of word
 	["Shift+G"]: move_to_end_of_file,
 	["G", "G"]: move_to_beginning_of_file,
 	["Shift+4"]: move_to_end_of_line,
@@ -303,6 +303,23 @@ func yank_line():
 	copy()
 	code_editor.deselect()
 	reset_visual()
+	
+func scan_right():
+	var current_text = code_editor.get_line(curr_line())
+	var i = curr_column()
+	while i < len(current_text) -1 :
+		i+= 1 
+		move_column_relative(1)
+		if current_text[i] in [' ',':','(',')','	']:
+			break
+func scan_left():
+	var current_text = code_editor.get_line(curr_line())
+	var i = curr_column()
+	while i > 0:
+		i-= 1 
+		move_column_relative(-1)
+		if current_text[i] in [' ',':','(',')','	']:
+			break
 func TODO():
 #	print("Have to implement this function")
 	pass
