@@ -1,14 +1,15 @@
 @tool
 extends EditorPlugin
 
-var script_editor : ScriptEditor
 var editor_interface : EditorInterface
+var script_editor : ScriptEditor
 var scrpit_editor_base : ScriptEditorBase
 var code_editor : CodeEdit
 
 var vim_mode : bool = true
 var visual_mode : bool = false
 var visual_line_mode : bool = false
+var extra_processing : bool = false
 
 var input_buffer : Array = []
 var clip_buffer : String = ""
@@ -22,8 +23,10 @@ var bindings = {
 	["L"]: move_right,
 	["E"]: TODO,
 	["B"]: TODO,
-	["Shift+G"]: move_to_beginning_of_file,
-	["G", "G"]: move_to_end_of_file,
+	["Shift+G"]: move_to_end_of_file,
+	["G", "G"]: move_to_beginning_of_file,
+	["Shift+4"]: move_to_end_of_line,
+	["Shift+6"]: move_to_start_of_line,
 	["I"]: enable_insert,
 	["Shift+I"]: insert_at_beginning_of_line,
 	["A"]: insert_after,
@@ -34,6 +37,7 @@ var bindings = {
 	["R", "ANY"]: replace_one_character, #TODO
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
+	["D"]: visual_mode_delete,
 	["D","D"]: delete_line,
 	["D", "W"]: delete_word,
 	["U"]: undo,
@@ -68,15 +72,16 @@ func _input(event):
 		return
 	
 	var new_keys = key_event.as_text_keycode()
-	if new_keys in ["Ctrl+S", "Ctrl+F", "Shift+Tab"]:
-		print("Reserved")
+	if new_keys in ["Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right"]:
+#		print("Reserved")
+#		print(key_event.get_keycode_with_modifiers())
 		return
 
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
 			input_buffer.push_back(new_keys)
-		get_viewport().set_input_as_handled()
+#		get_viewport().set_input_as_handled()
 		
 		#We are in insert mode
 	if key_event.is_pressed() and !key_event.is_echo():
@@ -96,14 +101,18 @@ func _input(event):
 # Checks for available commands to run, and manages clearing buffer.
 func process_buffer() ->void :
 	var valid = check_command(input_buffer)
+	get_viewport().set_input_as_handled()
+	get_viewport().set_process_shortcut_input(true)
+	
 	if abs(valid) == 1: #Full match
 		input_buffer.clear()
 	elif valid == 0: #Partial match??? 
-		print("Spare buffer: ", input_buffer)
+#		print("Spare buffer: ", input_buffer)
+		pass
 
 # Command buffer parser
 func check_command(commands:Array) -> int:
-	print(commands)
+#	print(commands)
 	var partial = false
 	var full = false
 	var nomatch = false
@@ -121,14 +130,13 @@ func check_command(commands:Array) -> int:
 				continue
 			var cmd = commands[i-1]
 			if cmd == key[i-1]:
-				print("\n\ncurrently matching?\n\n")
-				print("i:", i)
+#				print("\n\ncurrently matching?\n\n")
+#				print("i:", i)
 				partial = true
 				return 0
 
 	# No matches at all?
 	return -1
-
 
 ###########################
 ####  BOUND FUNCTIONS  ####
@@ -147,9 +155,14 @@ func set_vim_mode(mode : bool):
 		code_editor.caret_type = TextEdit.CARET_TYPE_LINE
 
 # Movement
+func move_to_end_of_line():
+	code_editor.set_caret_column(99999)
+func move_to_start_of_line():
+	var start = code_editor.get_first_non_whitespace_column(curr_line())
+	code_editor.set_caret_column(start)
 func move_to_end_of_file():
 	code_editor.set_caret_line(code_editor.get_line_count())
-	code_editor.set_caret_column(99999)
+	move_to_end_of_line()
 func move_to_beginning_of_file():
 	code_editor.set_caret_column(0)
 	code_editor.set_caret_line(0)
@@ -213,6 +226,14 @@ func delete_at_cursor():
 func delete_word():
 	code_editor.select_word_under_caret()
 	code_editor.delete_selection()
+func visual_mode_delete():
+	if !visual_mode and !visual_line_mode:
+		return -1
+	if  code_editor.has_selection():
+		copy()
+		code_editor.delete_selection()
+		reset_visual()
+
 	
 # Selection
 func select_line():
@@ -230,7 +251,6 @@ func enter_visual_line_selection():
 	visual_line_mode = true
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), 0, curr_line(), 99999)
-	pass
 func update_selection():
 	if visual_line_mode:
 		code_editor.select(select_from_line, 0, curr_line(), 9999)
@@ -243,17 +263,27 @@ func undo():
 func redo():
 	code_editor.redo()
 func save():
-	print("Saving?")
+#	print("Saving?")
 	var press_save = InputEventKey.new()
 	press_save.keycode = KEY_MASK_CTRL + KEY_S
 	press_save.pressed = true
 	Input.parse_input_event(press_save)
+#	var the_script = script_editor.get_current_script()
+#	print( the_script.get_path())
+#	var file = FileAccess.open(the_script.get_path(),FileAccess.WRITE) # File is opened and locked for use.
+#	print("file: ", file)
+#	file.store_string(code_editor.text)
+#	file = null # File is closed.
+func reset_visual():		
+	visual_line_mode = false
+	visual_mode = false
+	
 func indent():
 	code_editor.indent_lines()
 func dedent():
 	code_editor.unindent_lines()
 func search_function():
-	print("Searching?")
+#	print("Searching?")
 	var press_search = InputEventKey.new()
 	press_search.keycode = KEY_MASK_CTRL + KEY_F
 	press_search.pressed = true
@@ -265,9 +295,12 @@ func yank():
 		return -1 # Way to notify we aren't done with this input
 	copy()
 	code_editor.deselect()
+	reset_visual()
 func yank_line():
 	select_line()
 	copy()
 	code_editor.deselect()
+	reset_visual()
 func TODO():
-	print("Have to implement this function")
+#	print("Have to implement this function")
+	pass
