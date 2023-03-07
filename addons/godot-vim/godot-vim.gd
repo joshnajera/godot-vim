@@ -21,8 +21,8 @@ var bindings = {
 	["J"]: move_down,
 	["K"]: move_up,
 	["L"]: move_right,
-	["E"]: TODO,
-	["B"]: TODO,
+	["E"]: TODO, # End of word
+	["B"]: TODO, # Beginning of word
 	["Shift+G"]: move_to_end_of_file,
 	["G", "G"]: move_to_beginning_of_file,
 	["Shift+4"]: move_to_end_of_line,
@@ -33,8 +33,8 @@ var bindings = {
 	["Shift+A"]: insert_at_end_of_line,
 	["O"]: newline_insert,
 	["P"]: paste,
-	["Shift+P"]: TODO,
-	["R", "ANY"]: replace_one_character, #TODO
+	["Shift+P"]: TODO, # Past on new line
+	["R", "ANY"]: replace_one_character, # TODO
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
 	["D"]: visual_mode_delete,
@@ -44,19 +44,17 @@ var bindings = {
 	["Ctrl+R"]: redo,
 	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working
 	["Y"]: yank,
-	["Y", "Y"]: yank_line, #Yank line
+	["Y", "Y"]: yank_line,
 	["V"]: enter_visual_selection,
 	["Shift+V"]: enter_visual_line_selection,
-	["Slash"]: search_function, #TODO - Not Working
+	["Slash"]: search_function, # TODO - Not Working
 	["Shift+Comma", "Shift+Comma"]: dedent,
 	["Shift+Period", "Shift+Period"]: indent, 
 }
 
-
 func _enter_tree() -> void:
 	editor_interface = get_editor_interface()
 	script_editor = editor_interface.get_script_editor()
-
 
 func _input(event):
 	scrpit_editor_base = script_editor.get_current_editor()
@@ -71,7 +69,7 @@ func _input(event):
 	if key_event == null or !key_event.is_pressed(): #Don't process when not a key action
 		return
 	
-	var new_keys = key_event.as_text_keycode()
+	var new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
 	if new_keys in ["Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right"]:
 #		print("Reserved")
 #		print(key_event.get_keycode_with_modifiers())
@@ -81,7 +79,6 @@ func _input(event):
 	if vim_mode and event.is_pressed(): #We are in VIM mode
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
 			input_buffer.push_back(new_keys)
-#		get_viewport().set_input_as_handled()
 		
 		#We are in insert mode
 	if key_event.is_pressed() and !key_event.is_echo():
@@ -113,30 +110,19 @@ func process_buffer() ->void :
 # Command buffer parser
 func check_command(commands:Array) -> int:
 #	print(commands)
-	var partial = false
-	var full = false
-	var nomatch = false
-	if commands in bindings.keys():#Potential full-match
+	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
-		if err != -1: # full match
-			full = true
-			return 1
-		partial = true # Our last command sent back to buffer
-		return 0
-	else: #No immediate matches
-		for key in bindings.keys():
+		if err == -1: # partial match
+			return 0
+		return 1 # full match
+	else: # No immediate matches
+		for key in bindings.keys(): # Comparing against each binding one by one
 			var i = commands.size()
 			if i > key.size(): # If command buffer iteration is bigger than length of binding then skip it.
 				continue
-			var cmd = commands[i-1]
-			if cmd == key[i-1]:
-#				print("\n\ncurrently matching?\n\n")
-#				print("i:", i)
-				partial = true
+			if commands[i-1] == key[i-1]: #Partial match, not done with buffer
 				return 0
-
-	# No matches at all?
-	return -1
+	return -1 # No matches at all?
 
 ###########################
 ####  BOUND FUNCTIONS  ####
@@ -234,7 +220,7 @@ func visual_mode_delete():
 		code_editor.delete_selection()
 		reset_visual()
 
-	
+
 # Selection
 func select_line():
 	code_editor.select(curr_line() -1, 99999, curr_line(), 999999)
@@ -277,7 +263,6 @@ func save():
 func reset_visual():		
 	visual_line_mode = false
 	visual_mode = false
-	
 func indent():
 	code_editor.indent_lines()
 func dedent():
