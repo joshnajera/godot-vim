@@ -9,6 +9,7 @@ var code_editor : CodeEdit
 var vim_mode : bool = true
 var visual_mode : bool = false
 var visual_line_mode : bool = false
+var extra_processing : bool = false
 
 var input_buffer : Array = []
 var clip_buffer : String = ""
@@ -20,8 +21,10 @@ var bindings = {
 	["J"]: move_down,
 	["K"]: move_up,
 	["L"]: move_right,
-	["E"]: scan_right, # End of word
-	["B"]: scan_left, # Beginning of word
+	["E"]: move_to_end_of_word,
+	["Shift+E"]: move_to_next_whitespace,
+	["B"]: move_to_start_of_word,
+	["Shift+B"]:  move_to_previous_whitespace,
 	["Shift+G"]: move_to_end_of_file,
 	["G", "G"]: move_to_beginning_of_file,
 	["Shift+4"]: move_to_end_of_line,
@@ -31,8 +34,9 @@ var bindings = {
 	["A"]: insert_after,
 	["Shift+A"]: insert_at_end_of_line,
 	["O"]: newline_insert,
+	["Shift+O"]: TODO,
 	["P"]: paste,
-	["Shift+P"]: paste_on_previous_line,
+	["Shift+P"]: paste_on_previous_line, # TODO: Correct functionality
 	["R", "ANY"]: replace_one_character, # TODO
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
@@ -41,12 +45,12 @@ var bindings = {
 	["D", "W"]: delete_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
-	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working
+	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working -- cannot send shortcuts to godot?
 	["Y"]: visual_mode_yank,
 	["Y", "Y"]: yank_line,
 	["V"]: enter_visual_selection,
 	["Shift+V"]: enter_visual_line_selection,
-	["Slash"]: search_function, # TODO - Not Working
+	["Slash"]: search_function, # TODO - Not Working -- cannot send shortcuts to godot?
 	["Shift+Comma", "Shift+Comma"]: dedent,
 	["Shift+Period", "Shift+Period"]: indent, 
 }
@@ -93,7 +97,7 @@ func _input(event):
 		process_buffer()
 
 
-# Checks for available commands to run, and manages clearing buffer.
+## Checks for available commands to run, and manages clearing buffer.
 func process_buffer() ->void :
 	var valid = check_command(input_buffer)
 	get_viewport().set_input_as_handled()
@@ -105,7 +109,7 @@ func process_buffer() ->void :
 #		print("Spare buffer: ", input_buffer)
 		pass
 
-# Command buffer parser
+## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
 #	print(commands)
 	if commands in bindings.keys(): # Potential full-match
@@ -141,15 +145,19 @@ func set_vim_mode(mode : bool):
 # Movement
 func move_to_end_of_line():
 	code_editor.set_caret_column(99999)
+	update_selection()
 func move_to_start_of_line():
 	var start = code_editor.get_first_non_whitespace_column(curr_line())
 	code_editor.set_caret_column(start)
+	update_selection()
 func move_to_end_of_file():
 	code_editor.set_caret_line(code_editor.get_line_count())
 	move_to_end_of_line()
+	update_selection()
 func move_to_beginning_of_file():
 	code_editor.set_caret_column(0)
 	code_editor.set_caret_line(0)
+	update_selection()
 func move_right():
 	move_column_relative(1)
 	update_selection()
@@ -166,7 +174,65 @@ func move_column_relative(amount:int):
 	code_editor.set_caret_column(curr_column() + amount)
 func move_line_relative(amount:int):
 	code_editor.set_caret_line(curr_line() + amount)
-
+func move_to_end_of_word():
+	var current_text = code_editor.get_line(curr_line())
+	move_column_relative(1)
+	var i = curr_column()
+	while i < len(current_text)-1:
+		i+= 1 
+		print("I:", i)
+		print("len:", len(current_text))
+		if current_text[i] in [' ',':','(',')','	','.',',']:
+			break
+		else:
+			move_column_relative(1)
+	if i == len(current_text):
+		move_line_relative(1)
+		code_editor.set_caret_column(0)
+		move_to_end_of_word()
+	update_selection()
+func move_to_start_of_word():
+	var current_text = code_editor.get_line(curr_line())
+	move_column_relative(-1)
+	var i = curr_column()
+	while i > 0:
+		i-= 1
+		if current_text[i] in [' ',':','(',')','	','.',',']:
+			break
+		move_column_relative(-1)
+	if i <= 0:
+		move_line_relative(-1)
+		code_editor.set_caret_column(99999)
+		move_to_start_of_word()
+	update_selection()
+func move_to_next_whitespace():
+	var current_text = code_editor.get_line(curr_line())
+	move_column_relative(1)
+	var i = curr_column()
+	while i < len(current_text) -1 :
+		i+= 1 
+		if current_text[i] in [' ','	','\n']:
+			break
+		move_column_relative(1)
+	if i == len(current_text):
+		move_line_relative(1)
+		code_editor.set_caret_column(0)
+		move_to_next_whitespace()
+	update_selection()
+func move_to_previous_whitespace():
+	var current_text = code_editor.get_line(curr_line())
+	move_column_relative(-1)
+	var i = curr_column()
+	while i >0:
+		i-= 1 
+		if current_text[i] in [' ','	','\n']:
+			break
+		move_column_relative(-1)
+	if i <= 0:
+		move_line_relative(-1)
+		code_editor.set_caret_column(99999)
+		move_to_previous_whitespace()
+	update_selection()
 # Insertion
 func insert_after():
 	move_right()
@@ -183,19 +249,13 @@ func newline_insert():
 	enable_insert()
 	if code_editor.has_selection():
 		code_editor.deselect()
-	var enter = InputEventKey.new()
-	enter.pressed = true
-	enter.keycode = KEY_ENTER
-	Input.parse_input_event(enter)
+	simulate_press(KEY_ENTER)
 func paste():
 	code_editor.paste()
 func paste_on_previous_line():
 	move_up()
 	move_to_end_of_line()
-	var enter = InputEventKey.new()
-	enter.pressed = true
-	enter.keycode = KEY_ENTER
-	Input.parse_input_event(enter)
+	simulate_press(KEY_ENTER)
 	paste()
 func replace_one_character(): # TODO
 	TODO()
@@ -248,6 +308,8 @@ func enter_visual_line_selection():
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), 0, curr_line(), 99999)
 func update_selection():
+	if !visual_mode and !visual_line_mode:
+		return
 	var offset = 1
 	var select_offset = 0
 	var v_offset = 0
@@ -270,11 +332,8 @@ func undo():
 func redo():
 	code_editor.redo()
 func save():
+	simulate_press(KEY_CTRL + KEY_S)
 #	print("Saving?")
-	var press_save = InputEventKey.new()
-	press_save.keycode = KEY_MASK_CTRL + KEY_S
-	press_save.pressed = true
-	Input.parse_input_event(press_save)#	file = null # File is closed.
 ## Resets visual modes to false
 func reset_visual():
 	visual_line_mode = false
@@ -285,11 +344,7 @@ func dedent():
 	code_editor.unindent_lines()
 func search_function():
 #	print("Searching?")
-	print(script_editor.find_child("FindReplaceBar"))
-	var press_search = InputEventKey.new()
-	press_search.keycode = KEY_MASK_CTRL + KEY_F
-	press_search.pressed = true
-	Input.parse_input_event(press_search)
+	simulate_press(KEY_CTRL + KEY_F)
 func copy():
 	code_editor.copy()
 func visual_mode_yank():
@@ -304,22 +359,18 @@ func yank_line():
 	code_editor.deselect()
 	reset_visual()
 	
-func scan_right():
-	var current_text = code_editor.get_line(curr_line())
-	var i = curr_column()
-	while i < len(current_text) -1 :
-		i+= 1 
-		move_column_relative(1)
-		if current_text[i] in [' ',':','(',')','	']:
-			break
-func scan_left():
-	var current_text = code_editor.get_line(curr_line())
-	var i = curr_column()
-	while i > 0:
-		i-= 1 
-		move_column_relative(-1)
-		if current_text[i] in [' ',':','(',')','	']:
-			break
+
+			
+func simulate_press(keycode):
+	var press = InputEventKey.new()
+	var release = InputEventKey.new()
+	press.keycode = keycode
+	release.keycode = keycode
+	press.pressed = true
+	release.pressed = false
+	Input.parse_input_event(press)
+	Input.parse_input_event(release)
+
 func TODO():
 #	print("Have to implement this function")
 	pass
