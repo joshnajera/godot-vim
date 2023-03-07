@@ -9,12 +9,11 @@ var code_editor : CodeEdit
 var vim_mode : bool = true
 var visual_mode : bool = false
 var visual_line_mode : bool = false
-var extra_processing : bool = false
 
 var input_buffer : Array = []
 var clip_buffer : String = ""
-var select_from_line
-var select_from_column
+var select_from_line = 0
+var select_from_column = 0
 
 var bindings = {
 	["H"]: move_left,
@@ -33,7 +32,7 @@ var bindings = {
 	["Shift+A"]: insert_at_end_of_line,
 	["O"]: newline_insert,
 	["P"]: paste,
-	["Shift+P"]: TODO, # Past on new line
+	["Shift+P"]: paste_on_previous_line,
 	["R", "ANY"]: replace_one_character, # TODO
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
@@ -43,7 +42,7 @@ var bindings = {
 	["U"]: undo,
 	["Ctrl+R"]: redo,
 	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working
-	["Y"]: yank,
+	["Y"]: visual_mode_yank,
 	["Y", "Y"]: yank_line,
 	["V"]: enter_visual_selection,
 	["Shift+V"]: enter_visual_line_selection,
@@ -70,11 +69,10 @@ func _input(event):
 		return
 	
 	var new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
-	if new_keys in ["Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right"]:
+	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right"]:
 #		print("Reserved")
 #		print(key_event.get_keycode_with_modifiers())
 		return
-
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
@@ -191,12 +189,21 @@ func newline_insert():
 	Input.parse_input_event(enter)
 func paste():
 	code_editor.paste()
-func replace_one_character():
+func paste_on_previous_line():
+	move_up()
+	move_to_end_of_line()
+	var enter = InputEventKey.new()
+	enter.pressed = true
+	enter.keycode = KEY_ENTER
+	Input.parse_input_event(enter)
+	paste()
+func replace_one_character(): # TODO
 	TODO()
 func replace_selection():
-	if code_editor.has_selection():
-		code_editor.delete_selection()
-		enable_insert()
+	if !code_editor.has_selection():
+		code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
+	code_editor.delete_selection()
+	enable_insert()
 	
 # Deletion
 func delete_line():
@@ -229,7 +236,10 @@ func curr_column():
 func curr_line():
 	return code_editor.get_caret_line()
 func enter_visual_selection():
-	visual_mode = true
+	visual_mode = !visual_mode
+	if !visual_mode:
+		code_editor.deselect()
+		return
 	select_from_column = curr_column()
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
@@ -238,10 +248,21 @@ func enter_visual_line_selection():
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), 0, curr_line(), 99999)
 func update_selection():
+	var offset = 1
+	var select_offset = 0
+	var v_offset = 0
+	if (curr_line() < select_from_line):
+		offset = 0
+		select_offset = 1
+		v_offset = 1
+	if (curr_line() == select_from_line and curr_column() < select_from_column):
+		select_offset = 1
+		offset = 0
+		v_offset = 0
 	if visual_line_mode:
-		code_editor.select(select_from_line, 0, curr_line(), 9999)
+		code_editor.select(select_from_line, 0 if (v_offset == 0) else 99999, curr_line(), 99999 if (v_offset == 0) else 0)
 	if visual_mode:
-		code_editor.select(select_from_line, select_from_column, curr_line(), curr_column() +1)
+		code_editor.select(select_from_line, select_from_column + select_offset, curr_line(), curr_column() + offset)
 
 # Other
 func undo():
@@ -253,14 +274,9 @@ func save():
 	var press_save = InputEventKey.new()
 	press_save.keycode = KEY_MASK_CTRL + KEY_S
 	press_save.pressed = true
-	Input.parse_input_event(press_save)
-#	var the_script = script_editor.get_current_script()
-#	print( the_script.get_path())
-#	var file = FileAccess.open(the_script.get_path(),FileAccess.WRITE) # File is opened and locked for use.
-#	print("file: ", file)
-#	file.store_string(code_editor.text)
-#	file = null # File is closed.
-func reset_visual():		
+	Input.parse_input_event(press_save)#	file = null # File is closed.
+## Resets visual modes to false
+func reset_visual():
 	visual_line_mode = false
 	visual_mode = false
 func indent():
@@ -269,13 +285,14 @@ func dedent():
 	code_editor.unindent_lines()
 func search_function():
 #	print("Searching?")
+	print(script_editor.find_child("FindReplaceBar"))
 	var press_search = InputEventKey.new()
 	press_search.keycode = KEY_MASK_CTRL + KEY_F
 	press_search.pressed = true
 	Input.parse_input_event(press_search)
 func copy():
 	code_editor.copy()
-func yank():
+func visual_mode_yank():
 	if !visual_mode and !visual_line_mode:
 		return -1 # Way to notify we aren't done with this input
 	copy()
