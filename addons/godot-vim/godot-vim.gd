@@ -13,6 +13,7 @@ var extra_processing : bool = false
 
 var input_buffer : Array = []
 var clip_buffer : String = ""
+var search_buffer : String = ""
 var select_from_line = 0
 var select_from_column = 0
 
@@ -29,12 +30,15 @@ var bindings = {
 	["G", "G"]: move_to_beginning_of_file,
 	["Shift+4"]: move_to_end_of_line,
 	["Shift+6"]: move_to_start_of_line,
+	["Shift+8"]: find_next_occurance_of_word,
+	["N"]: find_again,
+	["Shift+N"]: find_again_backwards,
 	["I"]: enable_insert,
 	["Shift+I"]: insert_at_beginning_of_line,
 	["A"]: insert_after,
 	["Shift+A"]: insert_at_end_of_line,
 	["O"]: newline_insert,
-	["Shift+O"]: TODO,
+	["Shift+O"]: previous_line_insert,
 	["P"]: paste,
 	["Shift+P"]: paste_on_previous_line, # TODO: Correct functionality
 	["R", "ANY"]: replace_one_character, # TODO
@@ -74,7 +78,6 @@ func _input(event):
 	
 	var new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
 	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right"]:
-#		print("Reserved")
 #		print(key_event.get_keycode_with_modifiers())
 		return
 
@@ -111,7 +114,7 @@ func process_buffer() ->void :
 
 ## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
-#	print(commands)
+	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
 		if err == -1: # partial match
@@ -250,6 +253,11 @@ func newline_insert():
 	if code_editor.has_selection():
 		code_editor.deselect()
 	simulate_press(KEY_ENTER)
+func previous_line_insert():
+	move_line_relative(-1)
+	code_editor.set_caret_column(99999)
+	enable_insert()
+	simulate_press(KEY_ENTER)
 func paste():
 	code_editor.paste()
 func paste_on_previous_line():
@@ -345,6 +353,23 @@ func dedent():
 func search_function():
 #	print("Searching?")
 	simulate_press(KEY_CTRL + KEY_F)
+func find_next_occurance_of_word():
+	code_editor.select_word_under_caret()
+	search_buffer = code_editor.get_selected_text()
+	code_editor.deselect()
+	var result = code_editor.search(search_buffer, 0, curr_line(), curr_column())
+	code_editor.set_caret_column(result.x)
+	code_editor.set_caret_line(result.y)
+func find_again():
+	if search_buffer != "":
+		var result =code_editor.search(search_buffer, 0, curr_line(), curr_column() + 1)
+		code_editor.set_caret_column(result.x)
+		code_editor.set_caret_line(result.y)
+func find_again_backwards():
+	if search_buffer != "":
+		var result = code_editor.search(search_buffer, 4 , curr_line(), curr_column() -1)
+		code_editor.set_caret_column(result.x)
+		code_editor.set_caret_line(result.y)
 func copy():
 	code_editor.copy()
 func visual_mode_yank():
