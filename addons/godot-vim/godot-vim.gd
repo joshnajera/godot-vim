@@ -14,6 +14,7 @@ var extra_processing : bool = false
 var input_buffer : Array = []
 var clip_buffer : String = ""
 var search_buffer : String = ""
+var jump_buffer : Array[Vector2] = []
 var select_from_line = 0
 var select_from_column = 0
 
@@ -29,7 +30,8 @@ var bindings = {
 	["Shift+G"]: move_to_end_of_file,
 	["G", "G"]: move_to_beginning_of_file,
 	["Shift+4"]: move_to_end_of_line,
-	["Shift+6"]: move_to_start_of_line,
+	["Shift+6"]: move_to_start_of_line, # stops before whitespace
+	["0"]: move_to_zero_column,
 	["Shift+8"]: find_next_occurance_of_word,
 	["N"]: find_again,
 	["Shift+N"]: find_again_backwards,
@@ -39,7 +41,8 @@ var bindings = {
 	["Shift+A"]: insert_at_end_of_line,
 	["O"]: newline_insert,
 	["Shift+O"]: previous_line_insert,
-	["P"]: paste,
+	["Ctrl+O"]: jump_to_last_buffered_position,
+	["P"]: paste_after,
 	["Shift+P"]: paste_on_previous_line, # TODO: Correct functionality
 	["R", "ANY"]: replace_one_character, # TODO
 	["S"]: replace_selection,
@@ -57,6 +60,10 @@ var bindings = {
 	["Slash"]: search_function, # TODO - Not Working -- cannot send shortcuts to godot?
 	["Shift+Comma", "Shift+Comma"]: dedent,
 	["Shift+Period", "Shift+Period"]: indent, 
+	["Z", "M"]: fold_all,
+	["Z", "R"]: unfold_all , 
+	["Z", "C"]: fold_line ,
+	["Z", "O"]: unfold_line
 }
 
 func _enter_tree() -> void:
@@ -114,7 +121,6 @@ func process_buffer() ->void :
 
 ## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
-	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
 		if err == -1: # partial match
@@ -137,6 +143,7 @@ func check_command(commands:Array) -> int:
 func enable_vim():
 	set_vim_mode(true)
 func enable_insert():
+	code_editor.deselect()
 	set_vim_mode(false)
 func set_vim_mode(mode : bool):
 	vim_mode = mode
@@ -154,10 +161,12 @@ func move_to_start_of_line():
 	code_editor.set_caret_column(start)
 	update_selection()
 func move_to_end_of_file():
+	push_jump_buffer()
 	code_editor.set_caret_line(code_editor.get_line_count())
 	move_to_end_of_line()
 	update_selection()
 func move_to_beginning_of_file():
+	push_jump_buffer()
 	code_editor.set_caret_column(0)
 	code_editor.set_caret_line(0)
 	update_selection()
@@ -227,7 +236,7 @@ func move_to_previous_whitespace():
 	move_column_relative(-1)
 	var i = curr_column()
 	while i >0:
-		i-= 1 
+		i-= 1
 		if current_text[i] in [' ','	','\n']:
 			break
 		move_column_relative(-1)
@@ -236,6 +245,14 @@ func move_to_previous_whitespace():
 		code_editor.set_caret_column(99999)
 		move_to_previous_whitespace()
 	update_selection()
+func jump_to_last_buffered_position():
+	var temp = jump_buffer.pop_front()
+	code_editor.set_caret_line(temp.x)
+	code_editor.set_caret_column(temp.y)
+	update_selection()
+func move_to_zero_column():
+	code_editor.set_caret_column(0)
+
 # Insertion
 func insert_after():
 	move_right()
@@ -258,13 +275,14 @@ func previous_line_insert():
 	code_editor.set_caret_column(99999)
 	enable_insert()
 	simulate_press(KEY_ENTER)
-func paste():
+func paste_after():
+	move_column_relative(1)
 	code_editor.paste()
 func paste_on_previous_line():
 	move_up()
 	move_to_end_of_line()
 	simulate_press(KEY_ENTER)
-	paste()
+	code_editor.paste()
 func replace_one_character(): # TODO
 	TODO()
 func replace_selection():
@@ -333,6 +351,18 @@ func update_selection():
 		code_editor.select(select_from_line, 0 if (v_offset == 0) else 99999, curr_line(), 99999 if (v_offset == 0) else 0)
 	if visual_mode:
 		code_editor.select(select_from_line, select_from_column + select_offset, curr_line(), curr_column() + offset)
+		
+
+# Folding
+func unfold_all():
+	code_editor.unfold_all_lines()
+func fold_all():
+	code_editor.fold_all_lines()
+func unfold_line():
+	code_editor.unfold_line(curr_line())
+func fold_line():
+	code_editor.fold_line(curr_line())
+	
 
 # Other
 func undo():
@@ -354,6 +384,7 @@ func search_function():
 #	print("Searching?")
 	simulate_press(KEY_CTRL + KEY_F)
 func find_next_occurance_of_word():
+	push_jump_buffer()
 	code_editor.select_word_under_caret()
 	search_buffer = code_editor.get_selected_text()
 	code_editor.deselect()
@@ -361,11 +392,13 @@ func find_next_occurance_of_word():
 	code_editor.set_caret_column(result.x)
 	code_editor.set_caret_line(result.y)
 func find_again():
+	push_jump_buffer()
 	if search_buffer != "":
 		var result =code_editor.search(search_buffer, 0, curr_line(), curr_column() + 1)
 		code_editor.set_caret_column(result.x)
 		code_editor.set_caret_line(result.y)
 func find_again_backwards():
+	push_jump_buffer()
 	if search_buffer != "":
 		var result = code_editor.search(search_buffer, 4 , curr_line(), curr_column() -1)
 		code_editor.set_caret_column(result.x)
@@ -383,9 +416,7 @@ func yank_line():
 	copy()
 	code_editor.deselect()
 	reset_visual()
-	
-
-			
+# Helpers
 func simulate_press(keycode):
 	var press = InputEventKey.new()
 	var release = InputEventKey.new()
@@ -395,7 +426,10 @@ func simulate_press(keycode):
 	release.pressed = false
 	Input.parse_input_event(press)
 	Input.parse_input_event(release)
-
+func push_jump_buffer():
+	jump_buffer.push_front(Vector2(curr_line(),curr_column()))
+	if(jump_buffer.size() > 50):
+		jump_buffer.pop_back()
 func TODO():
 #	print("Have to implement this function")
 	pass
