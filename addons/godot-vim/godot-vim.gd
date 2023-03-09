@@ -111,16 +111,23 @@ func _input(event):
 func process_buffer() ->void :
 	var valid = check_command(input_buffer)
 	get_viewport().set_input_as_handled()
-	get_viewport().set_process_shortcut_input(true)
-	
 	if abs(valid) == 1: #Full match
 		input_buffer.clear()
 	elif valid == 0: #Partial match??? 
 #		print("Spare buffer: ", input_buffer)
 		pass
+	elif valid == 2: # Special case -- ends with "ANY"
+		print("Processing ANY key")
+		var copy_input_buffer = [] + input_buffer
+		copy_input_buffer[copy_input_buffer.size()-1] = "ANY"
+		if bindings.has(copy_input_buffer):
+			print(input_buffer[input_buffer.size()-1])
+			bindings[copy_input_buffer].call(input_buffer[input_buffer.size()-1])
+		input_buffer.clear()
 
 ## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
+	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
 		if err == -1: # partial match
@@ -132,7 +139,10 @@ func check_command(commands:Array) -> int:
 			if i > key.size(): # If command buffer iteration is bigger than length of binding then skip it.
 				continue
 			if commands[i-1] == key[i-1]: #Partial match, not done with buffer
-				return 0
+				return 0 # Need to rewrite this to make sure the previous commands in the buffer match
+#			if key[i-1] == "ANY":
+#				print(key)
+#				return 2
 	return -1 # No matches at all?
 
 ###########################
@@ -283,13 +293,19 @@ func paste_on_previous_line():
 	move_to_end_of_line()
 	simulate_press(KEY_ENTER)
 	code_editor.paste()
-func replace_one_character(): # TODO
-	TODO()
+func replace_one_character(the_char): # TODO
+	enable_insert()
+	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
+	code_editor.delete_selection()
+	print("Simulate press", OS.find_keycode_from_string(the_char))
+	simulate_press(OS.find_keycode_from_string(the_char))
+
 func replace_selection():
 	if !code_editor.has_selection():
 		code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
 	code_editor.delete_selection()
 	enable_insert()
+
 	
 # Deletion
 func delete_line():
@@ -418,6 +434,7 @@ func yank_line():
 	reset_visual()
 # Helpers
 func simulate_press(keycode):
+	print(keycode , " Received")
 	var press = InputEventKey.new()
 	var release = InputEventKey.new()
 	press.keycode = keycode
