@@ -52,12 +52,12 @@ var bindings = {
 	["D", "W"]: delete_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
-	["Shift+Semicolon","W", "Enter"]: save, #TODO - Not working -- cannot send shortcuts to godot?
+	["Shift+Semicolon","W", "Enter"]: save,
 	["Y"]: visual_mode_yank,
 	["Y", "Y"]: yank_line,
 	["V"]: enter_visual_selection,
 	["Shift+V"]: enter_visual_line_selection,
-	["Slash"]: search_function, # TODO - Not Working -- cannot send shortcuts to godot?
+	["Slash"]: search_function,
 	["Shift+Comma", "Shift+Comma"]: dedent,
 	["Shift+Period", "Shift+Period"]: indent, 
 	["Z", "M"]: fold_all,
@@ -71,6 +71,7 @@ func _enter_tree() -> void:
 	script_editor = editor_interface.get_script_editor()
 
 func _input(event):
+
 	scrpit_editor_base = script_editor.get_current_editor()
 	if !scrpit_editor_base:
 		return
@@ -84,7 +85,7 @@ func _input(event):
 		return
 	
 	var new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
-	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right"]:
+	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
 #		print(key_event.get_keycode_with_modifiers())
 		return
 
@@ -117,17 +118,17 @@ func process_buffer() ->void :
 #		print("Spare buffer: ", input_buffer)
 		pass
 	elif valid == 2: # Special case -- ends with "ANY"
-		print("Processing ANY key")
+#		print("Processing ANY key")
 		var copy_input_buffer = [] + input_buffer
 		copy_input_buffer[copy_input_buffer.size()-1] = "ANY"
 		if bindings.has(copy_input_buffer):
-			print(input_buffer[input_buffer.size()-1])
+#			print(input_buffer[input_buffer.size()-1])
 			bindings[copy_input_buffer].call(input_buffer[input_buffer.size()-1])
 		input_buffer.clear()
 
 ## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
-	print(commands)
+#	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
 		if err == -1: # partial match
@@ -202,8 +203,8 @@ func move_to_end_of_word():
 	var i = curr_column()
 	while i < len(current_text)-1:
 		i+= 1 
-		print("I:", i)
-		print("len:", len(current_text))
+#		print("I:", i)
+#		print("len:", len(current_text))
 		if current_text[i] in [' ',':','(',')','	','.',',']:
 			break
 		else:
@@ -385,8 +386,23 @@ func undo():
 	code_editor.undo()
 func redo():
 	code_editor.redo()
-func save():
-	simulate_press(KEY_CTRL + KEY_S)
+func save():	
+	var press = InputEventKey.new()
+	var release = InputEventKey.new()
+	press.ctrl_pressed = true
+	release.ctrl_pressed = true 
+	press.keycode = KEY_S 
+	release.keycode = KEY_S
+	press.pressed = true
+	release.pressed = false
+	Input.parse_input_event(press)
+	Input.parse_input_event(release) 
+
+	pass
+#	simulate_press(KEY_MASK_CTRL + KEY_S)
+#	simulate_press(KEY_CTRL + KEY_S)
+#	simulate_press(KEY_MASK_CMD_OR_CTRL + KEY_S)
+	
 #	print("Saving?")
 ## Resets visual modes to false
 func reset_visual():
@@ -397,8 +413,17 @@ func indent():
 func dedent():
 	code_editor.unindent_lines()
 func search_function():
-#	print("Searching?")
-	simulate_press(KEY_CTRL + KEY_F)
+	var press = InputEventKey.new()
+	var release = InputEventKey.new()
+	press.ctrl_pressed = true
+	release.ctrl_pressed = true 
+	press.keycode = KEY_F 
+	release.keycode = KEY_F
+	press.pressed = true
+	release.pressed = false
+	Input.parse_input_event(press)
+	Input.parse_input_event(release) 
+
 func find_next_occurance_of_word():
 	push_jump_buffer()
 	code_editor.select_word_under_caret()
@@ -434,7 +459,7 @@ func yank_line():
 	reset_visual()
 # Helpers
 func simulate_press(keycode):
-	print(keycode , " Received")
+#	print(keycode , " Received")
 	var press = InputEventKey.new()
 	var release = InputEventKey.new()
 	press.keycode = keycode
