@@ -44,7 +44,7 @@ var bindings = {
 	["Ctrl+O"]: jump_to_last_buffered_position,
 	["P"]: paste_after,
 	["Shift+P"]: paste_on_previous_line, # TODO: Correct functionality
-	["R", "ANY"]: replace_one_character, # TODO
+	["R", "ANY"]: replace_one_character, # TODO: not working
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
 	["D"]: visual_mode_delete,
