@@ -1,52 +1,55 @@
-# godot-vim
-VIM bindings for godot 4
+# godot-vim
+VIM bindings for godot 4
 
-Most typically used by myself, open to suggestions on missing bindings :)
+Most typically used by myself, open to suggestions on missing bindings :)
 
-## Bindings
+## Bindings
 
-"H"                            : move_left  
-"J"                            : move_down  
-"K"                            : move_up    
-"L"                            : move_right  
-"E"                            : move_to_end_of_word  
-"Shift+E"                      : move_to_next_whitespace  
-"B"                            : move_to_start_of_word  
-"Shift+B"                      : move_to_previous_whitespace  
-"Shift+G"                      : move_to_end_of_file  
-"G", "G"                       : move_to_beginning_of_file  
-"Shift+4"                      : move_to_end_of_line  
-"Shift+6"                      : move_to_start_of_line  # stops before whitespac  
-"0"                            : move_to_zero_column  
-"Shift+8"                      : find_next_occurance_of_word  
-"N"                            : find_again  
-"Shift+N"                      : find_again_backwards  
-"I"                            : enable_insert  
-"Shift+I"                      : insert_at_beginning_of_line  
-"A"                            : insert_after  
-"Shift+A"                      : insert_at_end_of_line  
-"O"                            : newline_insert  
-"Shift+O"                      : previous_line_insert  
-"Ctrl+O"                       : jump_to_last_buffered_position  
-"P"                            : paste_after  
-"Shift+P"                      : paste_on_previous_line # TODO: Correct functionalit  
-"R", "ANY"                     : replace_one_character  # TODO: not workin  
-"S"                            : replace_selection  
-"X"                            : delete_at_cursor  
-"D"                            : visual_mode_delete  
-"D","D"                        : delete_line  
-"D", "W"                       : delete_word  
-"U"                            : undo       
-"Ctrl+R"                       : redo       
-"Shift+Semicolon","W", "Enter" : save       
-"Y"                            : visual_mode_yank  
-"Y", "Y"                       : yank_line  
-"V"                            : enter_visual_selection  
-"Shift+V"                      : enter_visual_line_selection  
-"/"                            : search_function  
-"Shift+Comma", "Shift+Comma"   : dedent     
-"Shift+Period", "Shift+Period" : indent    
-"Z", "M"                       : fold_all   
-"Z", "R"                       : unfold_all  
-"Z", "C"                       : fold_line  
-"Z", "O"                       : unfold_line  
+| Key Combination | Action |
+| --- | --- |
+| Esc | Disable insert |
+| I | Enable insert |
+| H | Move left |
+| J | Move down |
+| K | Move up |
+| L | Move right |
+| E | Move to end of word |
+| Shift+E | Move to next whitespace |
+| B | Move to start of word |
+| Shift+B | Move to previous whitespace |
+| Shift+G | Move to end of file |
+| G, G | Move to beginning of file |
+| Shift+4 | Move to end of line |
+| Shift+6 | Move to start of line (stops before whitespace) |
+| 0 | Move to zero column |
+| Shift+8 | Find next occurrence of word |
+| N | Find again |
+| Shift+N | Find again backwards |
+| Shift+I | Insert at beginning of line |
+| A | Insert after |
+| Shift+A | Insert at end of line |
+| O | Newline insert |
+| Shift+O | Previous line insert |
+| Ctrl+O | Jump to last buffered position |
+| P | Paste after |
+| Shift+P | Paste on previous line (TODO: correct functionality) |
+| R, ANY | Replace one character (TODO: not working) |
+| S | Replace selection |
+| X | Delete at cursor |
+| D | Visual mode delete |
+| D, D | Delete line |
+| D, W | Delete word |
+| U | Undo |
+| Ctrl+R | Redo |
+| Shift+semicolon, W, Enter | Save |
+| Y | Visual mode yank |
+| Y, Y | Yank line |
+| V | Enter visual selection |
+| Shift+V | Enter visual line selection |
+| / | Search function |
+| Shift+Comma, Shift+Comma | Dedent |
+| Shift+Period, Shift+Period | Indent |
+| Z, M | Fold all |
+| Z, R | Unfold all |
+| Z, C | Fold line |
+| Z, O | Unfold line |
