@@ -17,6 +17,8 @@ var search_buffer : String = ""
 var jump_buffer : Array[Vector2] = []
 var select_from_line = 0
 var select_from_column = 0
+var new_keys : String = ""
+var full_line_copy : bool = false
 
 var bindings = {
 	["H"]: move_left,
@@ -43,7 +45,7 @@ var bindings = {
 	["Shift+O"]: previous_line_insert,
 	["Ctrl+O"]: jump_to_last_buffered_position,
 	["P"]: paste_after,
-	["Shift+P"]: paste_on_previous_line, # TODO: Correct functionality
+	["Shift+P"]: paste_before, # TODO: Correct functionality
 	["R", "ANY"]: replace_one_character, # TODO: not working
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
@@ -83,10 +85,9 @@ func _input(event):
 	var key_event = event as InputEventKey
 	if key_event == null or !key_event.is_pressed(): #Don't process when not a key action
 		return
-	
-	var new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
-	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
-#		print(key_event.get_keycode_with_modifiers())
+
+	new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
+	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+Shift+S", "Ctrl+Alt+S","Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
 		return
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
@@ -122,7 +123,7 @@ func process_buffer() ->void :
 		var copy_input_buffer = [] + input_buffer
 		copy_input_buffer[copy_input_buffer.size()-1] = "ANY"
 		if bindings.has(copy_input_buffer):
-#			print(input_buffer[input_buffer.size()-1])
+#			print(input_buffer)
 			bindings[copy_input_buffer].call(input_buffer[input_buffer.size()-1])
 		input_buffer.clear()
 
@@ -141,7 +142,8 @@ func check_command(commands:Array) -> int:
 				continue
 			if commands[i-1] == key[i-1]: #Partial match, not done with buffer
 				return 0 # Need to rewrite this to make sure the previous commands in the buffer match
-#			if key[i-1] == "ANY":
+			if key[i-1] == "ANY":
+				pass
 #				print(key)
 #				return 2
 	return -1 # No matches at all?
@@ -158,10 +160,18 @@ func enable_insert():
 	set_vim_mode(false)
 func set_vim_mode(mode : bool):
 	vim_mode = mode
-	if vim_mode:
-		code_editor.caret_type = TextEdit.CARET_TYPE_BLOCK
+	set_cursor_type()
+func set_cursor_type(type: TextEdit.CaretType = -1):
+	if type == -1:
+		if vim_mode:
+			if (code_editor.get_line(curr_line()).length() == curr_column()):
+				set_cursor_type(code_editor.CARET_TYPE_LINE)
+			else:
+				set_cursor_type(code_editor.CARET_TYPE_BLOCK)
+		else:
+			code_editor.caret_type = TextEdit.CARET_TYPE_LINE
 	else:
-		code_editor.caret_type = TextEdit.CARET_TYPE_LINE
+		code_editor.caret_type = type
 
 # Movement
 func move_to_end_of_line():
@@ -287,18 +297,31 @@ func previous_line_insert():
 	enable_insert()
 	simulate_press(KEY_ENTER)
 func paste_after():
-	move_column_relative(1)
+	if code_editor.has_selection():
+		code_editor.delete_selection()
+		code_editor.paste()
+		return
+	enable_insert()
+	if full_line_copy:
+		code_editor.set_caret_column(99999)
+		simulate_press(KEY_ENTER)
+	else:
+		move_column_relative(1)
 	code_editor.paste()
-func paste_on_previous_line():
-	move_up()
-	move_to_end_of_line()
-	simulate_press(KEY_ENTER)
+	enable_vim()
+func paste_before():	
+	if code_editor.has_selection():
+		code_editor.delete_selection()
+	if full_line_copy:
+		move_up()
+		move_to_end_of_line()
+		simulate_press(KEY_ENTER)
 	code_editor.paste()
 func replace_one_character(the_char): # TODO
-	enable_insert()
 	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
 	code_editor.delete_selection()
-	print("Simulate press", OS.find_keycode_from_string(the_char))
+	enable_insert()
+	print("Simulate press", the_char)
 	simulate_press(OS.find_keycode_from_string(the_char))
 
 func replace_selection():
@@ -312,6 +335,7 @@ func replace_selection():
 func delete_line():
 	select_line()
 	code_editor.cut()
+	full_line_copy = true
 func delete_at_cursor():
 	var line_len = len(code_editor.get_line(curr_line()))
 	if line_len == curr_column():
@@ -351,6 +375,7 @@ func enter_visual_line_selection():
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), 0, curr_line(), 99999)
 func update_selection():
+	set_cursor_type()
 	if !visual_mode and !visual_line_mode:
 		return
 	var offset = 1
@@ -364,6 +389,7 @@ func update_selection():
 		select_offset = 1
 		offset = 0
 		v_offset = 0
+
 	if visual_line_mode:
 		code_editor.select(select_from_line, 0 if (v_offset == 0) else 99999, curr_line(), 99999 if (v_offset == 0) else 0)
 	if visual_mode:
@@ -384,26 +410,12 @@ func fold_line():
 # Other
 func undo():
 	code_editor.undo()
+	code_editor.deselect()
 func redo():
 	code_editor.redo()
 func save():	
-	var press = InputEventKey.new()
-	var release = InputEventKey.new()
-	press.ctrl_pressed = true
-	release.ctrl_pressed = true 
-	press.keycode = KEY_S 
-	release.keycode = KEY_S
-	press.pressed = true
-	release.pressed = false
-	Input.parse_input_event(press)
-	Input.parse_input_event(release) 
+	simulate_press(KEY_S, true) 
 
-	pass
-#	simulate_press(KEY_MASK_CTRL + KEY_S)
-#	simulate_press(KEY_CTRL + KEY_S)
-#	simulate_press(KEY_MASK_CMD_OR_CTRL + KEY_S)
-	
-#	print("Saving?")
 ## Resets visual modes to false
 func reset_visual():
 	visual_line_mode = false
@@ -413,16 +425,7 @@ func indent():
 func dedent():
 	code_editor.unindent_lines()
 func search_function():
-	var press = InputEventKey.new()
-	var release = InputEventKey.new()
-	press.ctrl_pressed = true
-	release.ctrl_pressed = true 
-	press.keycode = KEY_F 
-	release.keycode = KEY_F
-	press.pressed = true
-	release.pressed = false
-	Input.parse_input_event(press)
-	Input.parse_input_event(release) 
+	simulate_press(KEY_F, true)
 
 func find_next_occurance_of_word():
 	push_jump_buffer()
@@ -444,24 +447,36 @@ func find_again_backwards():
 		var result = code_editor.search(search_buffer, 4 , curr_line(), curr_column() -1)
 		code_editor.set_caret_column(result.x)
 		code_editor.set_caret_line(result.y)
-func copy():
+func copy(full_line=false):
+	full_line_copy = full_line
 	code_editor.copy()
 func visual_mode_yank():
 	if !visual_mode and !visual_line_mode:
 		return -1 # Way to notify we aren't done with this input
 	copy()
+	if visual_line_mode:
+		full_line_copy = true
 	code_editor.deselect()
 	reset_visual()
 func yank_line():
 	select_line()
-	copy()
+	copy(true)
 	code_editor.deselect()
 	reset_visual()
 # Helpers
-func simulate_press(keycode):
-#	print(keycode , " Received")
+func simulate_press(keycode, ctrl = false, alt = false, shift=false):
+	print(keycode , " Received")
 	var press = InputEventKey.new()
 	var release = InputEventKey.new()
+	if ctrl:
+		press.ctrl_pressed = true
+		release.ctrl_pressed = true	
+	if shift:
+		press.shift_pressed = true
+		release.shift_pressed = true	
+	if alt:
+		press.alt_pressed = true
+		release.alt_pressed = true
 	press.keycode = keycode
 	release.keycode = keycode
 	press.pressed = true
