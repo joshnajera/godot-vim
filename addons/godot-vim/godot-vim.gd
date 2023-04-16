@@ -65,12 +65,14 @@ var bindings = {
 	["Z", "M"]: fold_all,
 	["Z", "R"]: unfold_all , 
 	["Z", "C"]: fold_line ,
-	["Z", "O"]: unfold_line
+	["Z", "O"]: unfold_line,
+	["/d", "G","G"]: jump_to_line
 }
 
 func _enter_tree() -> void:
 	editor_interface = get_editor_interface()
 	script_editor = editor_interface.get_script_editor()
+
 
 func _input(event):
 
@@ -87,7 +89,7 @@ func _input(event):
 		return
 
 	new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
-	if new_keys in ["Ctrl+Z","Ctrl+S", "Ctrl+Shift+S", "Ctrl+Alt+S","Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
+	if new_keys in ["Ctrl+Left", "Ctrl+Right", "Ctrl+Z","Ctrl+S", "Ctrl+Shift+S", "Ctrl+Alt+S","Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
 		return
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
@@ -95,14 +97,13 @@ func _input(event):
 			input_buffer.push_back(new_keys)
 		
 		#We are in insert mode
-	if key_event.is_pressed() and !key_event.is_echo():
-		if key_event.get_keycode_with_modifiers() == KEY_ESCAPE:
-			enable_vim()
-			visual_mode = false
-			visual_line_mode = false
-			input_buffer.clear()
-			if code_editor.has_selection():
-				code_editor.deselect()
+	if key_event.is_pressed() and key_event.get_keycode_with_modifiers() == KEY_ESCAPE:
+		enable_vim()
+		visual_mode = false
+		visual_line_mode = false
+		input_buffer.clear()
+		if code_editor.has_selection():
+			code_editor.deselect()
 	
 	#Have bufferable input
 	if !input_buffer.is_empty():
@@ -129,7 +130,7 @@ func process_buffer() ->void :
 
 ## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
-#	print(commands)
+	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
 		if err == -1: # partial match
@@ -273,6 +274,8 @@ func jump_to_last_buffered_position():
 	update_selection()
 func move_to_zero_column():
 	code_editor.set_caret_column(0)
+func jump_to_line():
+	print("JUMPING!")
 
 # Insertion
 func insert_after():
@@ -465,7 +468,7 @@ func yank_line():
 	reset_visual()
 # Helpers
 func simulate_press(keycode, ctrl = false, alt = false, shift=false):
-	print(keycode , " Received")
+#	print(keycode , " Received")
 	var press = InputEventKey.new()
 	var release = InputEventKey.new()
 	if ctrl:
@@ -487,6 +490,8 @@ func push_jump_buffer():
 	jump_buffer.push_front(Vector2(curr_line(),curr_column()))
 	if(jump_buffer.size() > 50):
 		jump_buffer.pop_back()
+func threaded_call(fn):
+	fn.call()
 func TODO():
 #	print("Have to implement this function")
 	pass
