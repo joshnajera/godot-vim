@@ -13,6 +13,8 @@ Most typically used by myself, open to suggestions on missing bindings
 | J | Move down |
 | K | Move up |
 | L | Move right |
+| Ctrl+U | Page Up |
+| Ctrl+D | Page Down |
 | E | Move to end of word |
 | Shift+E | Move to next whitespace |
 | B | Move to start of word |

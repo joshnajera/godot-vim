@@ -25,6 +25,8 @@ var bindings = {
 	["J"]: move_down,
 	["K"]: move_up,
 	["L"]: move_right,
+	["Ctrl+U"]: page_up,
+	["Ctrl+D"]: page_down,
 	["E"]: move_to_end_of_word,
 	["Shift+E"]: move_to_next_whitespace,
 	["B"]: move_to_start_of_word,
@@ -466,6 +468,23 @@ func yank_line():
 	copy(true)
 	code_editor.deselect()
 	reset_visual()
+
+func page_up():	
+	var last = code_editor.get_last_full_visible_line()
+	var first = code_editor.get_first_visible_line()
+	var diff = last - first
+	var curr = code_editor.scroll_vertical
+	code_editor.scroll_vertical = code_editor.get_scroll_pos_for_line( curr - (diff/2))
+	code_editor.set_caret_line(curr_line() - (diff/2))
+	
+	print(curr)
+func page_down():
+	var last = code_editor.get_last_full_visible_line()
+	var first = code_editor.get_first_visible_line()
+	var diff = last - first
+	var curr = code_editor.scroll_vertical
+	code_editor.scroll_vertical = code_editor.get_scroll_pos_for_line(curr + (diff/2))
+	code_editor.set_caret_line(curr_line() + (diff/2))
 # Helpers
 func simulate_press(keycode, ctrl = false, alt = false, shift=false):
 #	print(keycode , " Received")
@@ -473,10 +492,10 @@ func simulate_press(keycode, ctrl = false, alt = false, shift=false):
 	var release = InputEventKey.new()
 	if ctrl:
 		press.ctrl_pressed = true
-		release.ctrl_pressed = true	
+		release.ctrl_pressed = true
 	if shift:
 		press.shift_pressed = true
-		release.shift_pressed = true	
+		release.shift_pressed = true
 	if alt:
 		press.alt_pressed = true
 		release.alt_pressed = true
