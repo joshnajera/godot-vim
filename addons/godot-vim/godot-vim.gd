@@ -20,6 +20,8 @@ var select_from_column = 0
 var new_keys : String = ""
 var full_line_copy : bool = false
 
+var command_counter_buffer : String  = ""
+
 var bindings = {
 	["H"]: move_left,
 	["J"]: move_down,
@@ -47,7 +49,7 @@ var bindings = {
 	["Shift+O"]: previous_line_insert,
 	["Ctrl+O"]: jump_to_last_buffered_position,
 	["P"]: paste_after,
-	["Shift+P"]: paste_before, # TODO: Correct functionality
+	["Shift+P"]: paste_before,
 	["R", "ANY"]: replace_one_character, # TODO: not working
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
@@ -67,8 +69,7 @@ var bindings = {
 	["Z", "M"]: fold_all,
 	["Z", "R"]: unfold_all , 
 	["Z", "C"]: fold_line ,
-	["Z", "O"]: unfold_line,
-	["/d", "G","G"]: jump_to_line
+	["Z", "O"]: unfold_line
 }
 
 func _enter_tree() -> void:
@@ -96,6 +97,12 @@ func _input(event):
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
+			if new_keys.is_valid_int():
+				command_counter_buffer += new_keys
+				print(command_counter_buffer)
+			if new_keys == "0" and command_counter_buffer != "0":
+				get_viewport().set_input_as_handled()
+				return
 			input_buffer.push_back(new_keys)
 		
 		#We are in insert mode
@@ -106,6 +113,7 @@ func _input(event):
 		input_buffer.clear()
 		if code_editor.has_selection():
 			code_editor.deselect()
+		command_counter_buffer = ""
 	
 	#Have bufferable input
 	if !input_buffer.is_empty():
@@ -135,6 +143,7 @@ func check_command(commands:Array) -> int:
 	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
+		command_counter_buffer = ""
 		if err == -1: # partial match
 			return 0
 		return 1 # full match
@@ -186,24 +195,51 @@ func move_to_start_of_line():
 	update_selection()
 func move_to_end_of_file():
 	push_jump_buffer()
+	if command_counter_buffer.is_valid_int():
+		code_editor.set_caret_line(command_counter_buffer.to_int() - 1)
+		update_selection()
+		return
 	code_editor.set_caret_line(code_editor.get_line_count())
 	move_to_end_of_line()
 	update_selection()
 func move_to_beginning_of_file():
 	push_jump_buffer()
+	if command_counter_buffer.is_valid_int():
+		code_editor.set_caret_line(command_counter_buffer.to_int() - 1)
+		update_selection()
+		return
 	code_editor.set_caret_column(0)
 	code_editor.set_caret_line(0)
 	update_selection()
 func move_right():
+	print("Moving right")
+	print("Command counter: ", command_counter_buffer)
+	if command_counter_buffer != "":
+		var amount = command_counter_buffer.to_int()
+		print("Amount: ", amount)
+		move_column_relative(amount)
+		return
 	move_column_relative(1)
 	update_selection()
 func move_left():
+	if command_counter_buffer != "":
+		var amount = command_counter_buffer.to_int()
+		move_column_relative(-1 * amount)
+		return
 	move_column_relative(-1)
 	update_selection()
 func move_down():
+	if command_counter_buffer != "":
+		var amount = command_counter_buffer.to_int()
+		move_line_relative(amount)
+		return
 	move_line_relative(1)
 	update_selection()
 func move_up():
+	if command_counter_buffer != "":
+		var amount = command_counter_buffer.to_int()
+		move_line_relative(-1 * amount)
+		return
 	move_line_relative(-1)
 	update_selection()
 func move_column_relative(amount:int):
@@ -276,8 +312,7 @@ func jump_to_last_buffered_position():
 	update_selection()
 func move_to_zero_column():
 	code_editor.set_caret_column(0)
-func jump_to_line():
-	print("JUMPING!")
+
 
 # Insertion
 func insert_after():

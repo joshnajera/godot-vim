@@ -3,6 +3,8 @@ VIM bindings for godot 4
 
 Most typically used by myself, open to suggestions on missing bindings :)
 
+
+
 ## Bindings
 
 | Key Combination | Action |
@@ -55,3 +57,9 @@ Most typically used by myself, open to suggestions on missing bindings
 | Z, R | Unfold all |
 | Z, C | Fold line |
 | Z, O | Unfold line |
+
+
+Supports number prefixes for moving (H,J,K,L, GG, SHIFT + G), e.g.:
+12+GG will do vim's jump to line (12)
+5+J will move down 5 times
+etc.
