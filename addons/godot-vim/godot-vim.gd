@@ -99,7 +99,7 @@ func _input(event):
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
 			if new_keys.is_valid_int():
 				command_counter_buffer += new_keys
-				print(command_counter_buffer)
+#				print(command_counter_buffer)
 			if new_keys == "0" and command_counter_buffer != "0":
 				get_viewport().set_input_as_handled()
 				return
@@ -140,7 +140,7 @@ func process_buffer() ->void :
 
 ## Command buffer parser --naive implementation, could be improved
 func check_command(commands:Array) -> int:
-	print(commands)
+#	print(commands)
 	if commands in bindings.keys(): # Potential full-match
 		var err = bindings[commands].call()
 		command_counter_buffer = ""
@@ -212,11 +212,8 @@ func move_to_beginning_of_file():
 	code_editor.set_caret_line(0)
 	update_selection()
 func move_right():
-	print("Moving right")
-	print("Command counter: ", command_counter_buffer)
 	if command_counter_buffer != "":
 		var amount = command_counter_buffer.to_int()
-		print("Amount: ", amount)
 		move_column_relative(amount)
 		return
 	move_column_relative(1)
@@ -361,7 +358,6 @@ func replace_one_character(the_char): # TODO
 	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
 	code_editor.delete_selection()
 	enable_insert()
-	print("Simulate press", the_char)
 	simulate_press(OS.find_keycode_from_string(the_char))
 
 func replace_selection():
@@ -512,7 +508,7 @@ func page_up():
 	code_editor.scroll_vertical = code_editor.get_scroll_pos_for_line( curr - (diff/2))
 	code_editor.set_caret_line(curr_line() - (diff/2))
 	
-	print(curr)
+#	print(curr)
 func page_down():
 	var last = code_editor.get_last_full_visible_line()
 	var first = code_editor.get_first_visible_line()
