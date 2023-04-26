@@ -1,65 +1,66 @@
-# godot-vim
+# godot-vim
 VIM bindings for godot 4
 
-Most typically used by myself, open to suggestions on missing bindings :)
+Most typically used by myself, open to suggestions on missing bindings :) 
+
+Supports number prefixes for moving (h,j,k,l, gg, G), e.g.: 
+
+12+gg will do vim's jump to line (12) 
+
+5+j will move down 5 times 
+
+etc. 
 
 
-
-## Bindings
+## Bindings
 
 | Key Combination | Action |
 | --- | --- |
 | Esc | Disable insert |
-| I | Enable insert |
-| H | Move left |
-| J | Move down |
-| K | Move up |
-| L | Move right |
-| Ctrl+U | Page Up |
-| Ctrl+D | Page Down |
-| E | Move to end of word |
-| Shift+E | Move to next whitespace |
-| B | Move to start of word |
-| Shift+B | Move to previous whitespace |
-| Shift+G | Move to end of file |
-| G, G | Move to beginning of file |
-| Shift+4 | Move to end of line |
-| Shift+6 | Move to start of line (stops before whitespace) |
+| i | Enable insert |
+| h | Move left |
+| j | Move down |
+| k | Move up |
+| l | Move right |
+| Ctrl+u | Page Up |
+| Ctrl+d | Page Down |
+| e | Move to end of word |
+| Shift+e | Move to next whitespace |
+| b | Move to start of word |
+| Shift+b | Move to previous whitespace |
+| Shift+g | Move to end of file |
+| gg | Move to beginning of file |
+| $ | Move to end of line |
+| ^ | Move to start of line (stops before whitespace) |
 | 0 | Move to zero column |
-| Shift+8 | Find next occurrence of word |
-| N | Find again |
-| Shift+N | Find again backwards |
-| Shift+I | Insert at beginning of line |
-| A | Insert after |
-| Shift+A | Insert at end of line |
-| O | Newline insert |
-| Shift+O | Previous line insert |
-| Ctrl+O | Jump to last buffered position |
-| P | Paste after |
-| Shift+P | Paste on previous line (TODO: correct functionality) |
-| R, ANY | Replace one character (TODO: not working) |
-| S | Replace selection |
-| X | Delete at cursor |
-| D | Visual mode delete |
-| D, D | Delete line |
-| D, W | Delete word |
-| U | Undo |
-| Ctrl+R | Redo |
-| Shift+semicolon, W, Enter | Save |
-| Y | Visual mode yank |
-| Y, Y | Yank line |
-| V | Enter visual selection |
-| Shift+V | Enter visual line selection |
+| * | Find next occurrence of word |
+| n | Find again |
+| Shift+n | Find again backwards |
+| Shift+i | Insert at beginning of line |
+| a | Insert after |
+| Shift+a | Insert at end of line |
+| o | Newline insert |
+| Shift+o | Previous line insert |
+| Ctrl+o | Jump to last buffered position |
+| p | Paste after |
+| Shift+p | Paste before |
+| r ANY | Replace one character (TODO: not working) |
+| s | Replace selection |
+| x | Delete at cursor |
+| d | Visual mode delete |
+| dd | Delete line |
+| dW | Delete word |
+| u | Undo |
+| Ctrl+r | Redo |
+| :W Enter | Save |
+| y | Visual mode yank |
+| yy | Yank line |
+| v | Enter visual selection |
+| Shift+v | Enter visual line selection |
 | / | Search function |
-| Shift+Comma, Shift+Comma | Dedent |
-| Shift+Period, Shift+Period | Indent |
-| Z, M | Fold all |
-| Z, R | Unfold all |
-| Z, C | Fold line |
-| Z, O | Unfold line |
-
-
-Supports number prefixes for moving (H,J,K,L, GG, SHIFT + G), e.g.:
-12+GG will do vim's jump to line (12)
-5+J will move down 5 times
-etc.
+| << | Dedent |
+| >> | Indent |
+| zm | Fold all |
+| zr | Unfold all |
+| zc | Fold line |
+| zo | Unfold line |
