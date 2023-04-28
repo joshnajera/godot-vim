@@ -20,6 +20,11 @@ var select_from_column = 0
 var new_keys : String = ""
 var full_line_copy : bool = false
 
+var breakers : Array = [':','(',')','[',']','.',',','?','+','=','-','$','%','\'','"']
+var whitespace : Array = [' ','	']
+var delimiters : Array = [' ',':','(',')','[',']','	','.',',']
+var alphanumeric : Array = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
 var command_counter_buffer : String  = ""
 
 var bindings = {
@@ -31,7 +36,8 @@ var bindings = {
 	["Ctrl+D"]: page_down,
 	["E"]: move_to_end_of_word,
 	["Shift+E"]: move_to_next_whitespace,
-	["B"]: move_to_start_of_word,
+	["B"]: move_back_to_start_of_word,
+	["W"]: move_forward_to_start_of_word,
 	["Shift+B"]:  move_to_previous_whitespace,
 	["Shift+G"]: move_to_end_of_file,
 	["G", "G"]: move_to_beginning_of_file,
@@ -53,9 +59,11 @@ var bindings = {
 	["R", "ANY"]: replace_one_character, # TODO: not working
 	["S"]: replace_selection,
 	["X"]: delete_at_cursor,
+	["Shift+D"]: delete_to_end_of_line,
 	["D"]: visual_mode_delete,
 	["D","D"]: delete_line,
 	["D", "W"]: delete_word,
+	["D", "B"]: delete_backward,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
 	["Shift+Semicolon","W", "Enter"]: save,
@@ -249,9 +257,7 @@ func move_to_end_of_word():
 	var i = curr_column()
 	while i < len(current_text)-1:
 		i+= 1 
-#		print("I:", i)
-#		print("len:", len(current_text))
-		if current_text[i] in [' ',':','(',')','	','.',',']:
+		if current_text[i] in delimiters:
 			break
 		else:
 			move_column_relative(1)
@@ -260,19 +266,44 @@ func move_to_end_of_word():
 		code_editor.set_caret_column(0)
 		move_to_end_of_word()
 	update_selection()
-func move_to_start_of_word():
+func move_forward_to_start_of_word(wrap : bool = true):
 	var current_text = code_editor.get_line(curr_line())
-	move_column_relative(-1)
 	var i = curr_column()
-	while i > 0:
+	while i < len(current_text):
+		i+= 1 
+		if i == len(current_text):
+			break
+		move_column_relative(1)
+		if current_text[i-1] in alphanumeric and current_text[i] in breakers:
+			break
+		elif current_text[i-1] in breakers and current_text[i] in alphanumeric:
+			break
+		elif current_text[i-1] in whitespace and current_text[i] in breakers + alphanumeric:
+			break
+	if i == len(current_text) and wrap:
+		move_line_relative(1)
+		code_editor.set_caret_column(0)
+		move_forward_to_start_of_word()
+	update_selection()
+func move_back_to_start_of_word(wrap : bool = true):
+	var current_text = code_editor.get_line(curr_line())
+#	move_column_relative(-1)
+	var i = curr_column()
+	move_column_relative(-1)
+	while i > 1:
 		i-= 1
-		if current_text[i] in [' ',':','(',')','	','.',',']:
+		if current_text[i] in alphanumeric and current_text[i-1] in breakers:
+			break
+		elif current_text[i] in breakers and current_text[i-1] in alphanumeric:
+			break
+		elif current_text[i] in breakers + alphanumeric and current_text[i-1] in whitespace:
 			break
 		move_column_relative(-1)
-	if i <= 0:
+	print(i)
+	if curr_column() <= 0 and wrap:
 		move_line_relative(-1)
 		code_editor.set_caret_column(99999)
-		move_to_start_of_word()
+		move_back_to_start_of_word()
 	update_selection()
 func move_to_next_whitespace():
 	var current_text = code_editor.get_line(curr_line())
@@ -372,16 +403,39 @@ func delete_line():
 	select_line()
 	code_editor.cut()
 	full_line_copy = true
+func delete_to_end_of_line():
+	if visual_mode:
+		delete_line()
+		return
+	code_editor.select(curr_line(), curr_column(), curr_line(), 9999)
+	copy()
+	code_editor.delete_selection()
 func delete_at_cursor():
 	var line_len = len(code_editor.get_line(curr_line()))
 	if line_len == curr_column():
 		code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() -1)
 	else:
 		code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
+	copy()
 	code_editor.delete_selection()
 func delete_word():
-	code_editor.select_word_under_caret()
-	code_editor.delete_selection()
+	if curr_column() == code_editor.get_line(curr_line()).length() -1:
+		delete_at_cursor()
+		return
+	enter_visual_selection()
+	move_forward_to_start_of_word(false)
+	move_column_relative(-1)
+	update_selection()
+	code_editor.cut()
+	visual_mode = false
+func delete_backward():
+	move_column_relative(-1)
+	enter_visual_selection()
+	move_back_to_start_of_word()
+	code_editor.cut()
+	full_line_copy = false
+	visual_mode = false
+
 func visual_mode_delete():
 	if !visual_mode and !visual_line_mode:
 		return -1
@@ -425,7 +479,6 @@ func update_selection():
 		select_offset = 1
 		offset = 0
 		v_offset = 0
-
 	if visual_line_mode:
 		code_editor.select(select_from_line, 0 if (v_offset == 0) else 99999, curr_line(), 99999 if (v_offset == 0) else 0)
 	if visual_mode:

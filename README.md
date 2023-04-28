@@ -26,7 +26,8 @@ etc.
 | Ctrl + d | Page Down |
 | e | Move to end of word |
 | Shift + e | Move to next whitespace |
-| b | Move to start of word |
+| b | Move to start of back word |
+| w | Move to start of next word |
 | Shift + b | Move to previous whitespace |
 | Shift + g | Move to end of file |
 | gg | Move to beginning of file |
@@ -48,7 +49,10 @@ etc.
 | s | Replace selection |
 | x | Delete at cursor |
 | d | Visual mode delete |
+| Shift+d | Delete to end of line |
 | dd | Delete line |
+| dw | Delete forward one word |
+| db | Delete backward one word |
 | dw | Delete word |
 | u | Undo |
 | Ctrl + r | Redo |
