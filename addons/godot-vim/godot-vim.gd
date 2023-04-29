@@ -9,7 +9,7 @@ var code_editor : CodeEdit
 var vim_mode : bool = true
 var visual_mode : bool = false
 var visual_line_mode : bool = false
-var extra_processing : bool = false
+var process_paste : bool = false
 
 var input_buffer : Array = []
 var clip_buffer : String = ""
@@ -84,6 +84,12 @@ var bindings = {
 func _enter_tree() -> void:
 	editor_interface = get_editor_interface()
 	script_editor = editor_interface.get_script_editor()
+
+func _process(delta):
+	if process_paste:
+		code_editor.paste()
+		enable_vim()
+		process_paste = false
 
 
 func _input(event):
@@ -166,8 +172,7 @@ func check_command(commands:Array) -> int:
 				continue
 			if commands[i-1] == key[i-1]: #Partial match, not done with buffer
 				return 0 # Need to rewrite this to make sure the previous commands in the buffer match
-			if key[i-1] == "ANY":
-				pass
+#			if key[i-1] == "ANY":
 #				print(key)
 #				return 2
 	return -1 # No matches at all?
@@ -393,6 +398,8 @@ func newline_insert():
 	if code_editor.has_selection():
 		code_editor.deselect()
 	simulate_press(KEY_ENTER)
+	
+	
 func previous_line_insert():
 	move_line_relative(-1)
 	code_editor.set_caret_column(99999)
@@ -409,8 +416,8 @@ func paste_after():
 		simulate_press(KEY_ENTER)
 	else:
 		move_column_relative(1)
-	code_editor.paste()
-	enable_vim()
+	process_paste = true
+
 func paste_before():	
 	if code_editor.has_selection():
 		code_editor.delete_selection()
@@ -420,9 +427,9 @@ func paste_before():
 		simulate_press(KEY_ENTER)
 	code_editor.paste()
 func replace_one_character(the_char): # TODO
+	enable_insert()
 	code_editor.select(curr_line(), curr_column(), curr_line(), curr_column() +1)
 	code_editor.delete_selection()
-	enable_insert()
 	simulate_press(OS.find_keycode_from_string(the_char))
 
 func replace_selection():
@@ -504,6 +511,7 @@ func enter_visual_line_selection():
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), 0, curr_line(), 99999)
 func update_selection():
+	code_editor.deselect()
 	if !visual_mode and !visual_line_mode:
 		return
 	var offset = 1
@@ -600,6 +608,7 @@ func page_up():
 	code_editor.set_caret_line(curr_line() - (diff/2))
 	
 #	print(curr)
+
 func page_down():
 	var last = code_editor.get_last_full_visible_line()
 	var first = code_editor.get_first_visible_line()
