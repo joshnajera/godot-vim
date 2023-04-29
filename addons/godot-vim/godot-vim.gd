@@ -20,9 +20,8 @@ var select_from_column = 0
 var new_keys : String = ""
 var full_line_copy : bool = false
 
-var breakers : Array = [':','(',')','[',']','.',',','?','+','=','-','$','%','\'','"']
+var breakers : Array = ['!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/', ':', ';', '<', '=', '>', '?', '@', '[', '\\', ']', '^', '`', '\'', '{', '|', '}', '~']
 var whitespace : Array = [' ','	']
-var delimiters : Array = [' ',':','(',')','[',']','	','.',',']
 var alphanumeric : Array = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_']
 
 var command_counter_buffer : String  = ""
@@ -65,6 +64,7 @@ var bindings = {
 	["D","D"]: delete_line,
 	["D", "W"]: delete_word,
 	["D", "B"]: delete_backward,
+	["D", "E"]: delete_to_end_of_word,
 	["U"]: undo,
 	["Ctrl+R"]: redo,
 	["Shift+Semicolon","W", "Enter"]: save,
@@ -264,10 +264,13 @@ func move_to_end_of_word():
 	var i = curr_column()
 	while i < len(current_text)-1:
 		i+= 1 
-		if current_text[i] in delimiters:
+		if current_text[i-1] in alphanumeric and current_text[i] in breakers:
 			break
-		else:
-			move_column_relative(1)
+		elif current_text[i-1] in breakers and current_text[i] in alphanumeric:
+			break
+		elif current_text[i-1] in breakers + alphanumeric and current_text[i] in whitespace:
+			break
+		move_column_relative(1)
 	if i == len(current_text):
 		move_line_relative(1)
 		code_editor.set_caret_column(0)
@@ -466,7 +469,12 @@ func delete_backward():
 	code_editor.cut()
 	full_line_copy = false
 	visual_mode = false
-
+func delete_to_end_of_word():
+	enter_visual_selection()
+	move_to_end_of_word()
+	code_editor.cut()
+	full_line_copy = false
+	visual_mode = false
 func visual_mode_delete():
 	if !visual_mode and !visual_line_mode:
 		return -1

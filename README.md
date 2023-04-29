@@ -52,9 +52,9 @@ etc.
 | d | Visual mode delete |
 | Shift+d | Delete to end of line |
 | dd | Delete line |
-| dw | Delete forward one word |
 | db | Delete backward one word |
-| dw | Delete word |
+| dw | Delete to start of next word |
+| de | Delete to end of word |
 | u | Undo |
 | Ctrl + r | Redo |
 | :w Enter | Save |
