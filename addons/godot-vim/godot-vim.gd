@@ -96,6 +96,8 @@ func _input(event):
 		return
 	if !code_editor.has_focus(): #Don't process when no focus
 		return
+	if not code_editor.is_connected("caret_changed", set_cursor_type):
+		code_editor.caret_changed.connect(set_cursor_type)
 	var key_event = event as InputEventKey
 	if key_event == null or !key_event.is_pressed(): #Don't process when not a key action
 		return
@@ -103,6 +105,7 @@ func _input(event):
 	new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
 	if new_keys in ["Ctrl+Left", "Ctrl+Right", "Ctrl+Z","Ctrl+S", "Ctrl+Shift+S", "Ctrl+Alt+S","Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
 		return
+		
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
 		if new_keys not in ["Shift","Ctrl","Alt","Escape"]: #Don't add these to input buffer.
@@ -183,14 +186,17 @@ func set_vim_mode(mode : bool):
 	vim_mode = mode
 	set_cursor_type()
 func set_cursor_type(type: TextEdit.CaretType = -1):
-	if type == -1:
+	if type == -1:# -1 for 'auto' caret
 		if vim_mode:
 			if (code_editor.get_line(curr_line()).length() == curr_column()):
 				set_cursor_type(code_editor.CARET_TYPE_LINE)
+				code_editor.add_theme_constant_override("caret_width", 8)
 			else:
 				set_cursor_type(code_editor.CARET_TYPE_BLOCK)
+				code_editor.add_theme_constant_override("caret_width", 1)
 		else:
 			code_editor.caret_type = TextEdit.CARET_TYPE_LINE
+			code_editor.add_theme_constant_override("caret_width", 1)
 	else:
 		code_editor.caret_type = type
 
@@ -316,7 +322,7 @@ func move_back_to_start_of_word(wrap : bool = true):
 		elif current_text[i] in breakers + alphanumeric and current_text[i-1] in whitespace:
 			break
 		move_column_relative(-1)
-	print(i)
+#	print(i)
 	if curr_column() <= 0 and wrap:
 		move_line_relative(-1)
 		code_editor.set_caret_column(99999)
@@ -482,7 +488,6 @@ func enter_visual_line_selection():
 	select_from_line = curr_line()
 	code_editor.select(curr_line(), 0, curr_line(), 99999)
 func update_selection():
-	set_cursor_type()
 	if !visual_mode and !visual_line_mode:
 		return
 	var offset = 1
@@ -610,8 +615,7 @@ func push_jump_buffer():
 	jump_buffer.push_front(Vector2(curr_line(),curr_column()))
 	if(jump_buffer.size() > 50):
 		jump_buffer.pop_back()
-func threaded_call(fn):
-	fn.call()
+
 func TODO():
 #	print("Have to implement this function")
 	pass
