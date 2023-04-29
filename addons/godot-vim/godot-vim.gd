@@ -290,6 +290,9 @@ func move_forward_to_start_of_word(wrap : bool = true):
 	if i == len(current_text) and wrap:
 		move_line_relative(1)
 		code_editor.set_caret_column(0)
+		current_text = code_editor.get_line(curr_line())
+		if current_text[0] not in whitespace:
+			return
 		move_forward_to_start_of_word()
 	update_selection()
 func move_after_next_whitespace(wrap : bool = true):
@@ -305,6 +308,9 @@ func move_after_next_whitespace(wrap : bool = true):
 	if i == len(current_text) and wrap:
 		move_line_relative(1)
 		code_editor.set_caret_column(0)
+		current_text = code_editor.get_line(curr_line())
+		if current_text[0] not in whitespace:
+			return
 		move_forward_to_start_of_word()
 	update_selection()
 	
@@ -322,6 +328,8 @@ func move_back_to_start_of_word(wrap : bool = true):
 		elif current_text[i] in breakers + alphanumeric and current_text[i-1] in whitespace:
 			break
 		move_column_relative(-1)
+		if i == 1 and current_text[0] not in whitespace:
+			return
 #	print(i)
 	if curr_column() <= 0 and wrap:
 		move_line_relative(-1)
@@ -334,7 +342,7 @@ func move_to_next_whitespace():
 	var i = curr_column()
 	while i < len(current_text) -1 :
 		i+= 1 
-		if current_text[i] in [' ','	','\n']:
+		if current_text[i] in whitespace:
 			break
 		move_column_relative(1)
 	if i == len(current_text):
@@ -348,7 +356,7 @@ func move_to_previous_whitespace():
 	var i = curr_column()
 	while i > 0:
 		i-= 1
-		if current_text[i] in [' ','	','\n']:
+		if current_text[i] in whitespace and current_text[i+1] not in whitespace:
 			break
 		move_column_relative(-1)
 	if curr_column() <= 0:
