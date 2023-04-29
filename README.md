@@ -27,10 +27,11 @@ etc.
 | e | Move to end of word |
 | Shift + e | Move to next whitespace |
 | b | Move to start of back word |
-| w | Move to start of next word |
 | Shift + b | Move to previous whitespace |
-| Shift + g | Move to end of file |
+| w | Move to start of next word |
+| Shift + w | Move to next word after whitespace |
 | gg | Move to beginning of file |
+| Shift + g | Move to end of file |
 | $ | Move to end of line |
 | ^ | Move to start of line (stops before whitespace) |
 | 0 | Move to zero column |

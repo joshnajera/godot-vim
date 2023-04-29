@@ -37,8 +37,9 @@ var bindings = {
 	["E"]: move_to_end_of_word,
 	["Shift+E"]: move_to_next_whitespace,
 	["B"]: move_back_to_start_of_word,
-	["W"]: move_forward_to_start_of_word,
 	["Shift+B"]:  move_to_previous_whitespace,
+	["W"]: move_forward_to_start_of_word,
+	["Shift+W"]: move_after_next_whitespace,
 	["Shift+G"]: move_to_end_of_file,
 	["G", "G"]: move_to_beginning_of_file,
 	["Shift+4"]: move_to_end_of_line,
@@ -285,6 +286,22 @@ func move_forward_to_start_of_word(wrap : bool = true):
 		code_editor.set_caret_column(0)
 		move_forward_to_start_of_word()
 	update_selection()
+func move_after_next_whitespace(wrap : bool = true):
+	var current_text = code_editor.get_line(curr_line())
+	var i = curr_column()
+	while i < len(current_text):
+		i+= 1 
+		if i == len(current_text):
+			break
+		move_column_relative(1)
+		if current_text[i-1] in whitespace and current_text[i] in breakers + alphanumeric:
+			break
+	if i == len(current_text) and wrap:
+		move_line_relative(1)
+		code_editor.set_caret_column(0)
+		move_forward_to_start_of_word()
+	update_selection()
+	
 func move_back_to_start_of_word(wrap : bool = true):
 	var current_text = code_editor.get_line(curr_line())
 #	move_column_relative(-1)
@@ -323,12 +340,12 @@ func move_to_previous_whitespace():
 	var current_text = code_editor.get_line(curr_line())
 	move_column_relative(-1)
 	var i = curr_column()
-	while i >0:
+	while i > 0:
 		i-= 1
 		if current_text[i] in [' ','	','\n']:
 			break
 		move_column_relative(-1)
-	if i <= 0:
+	if curr_column() <= 0:
 		move_line_relative(-1)
 		code_editor.set_caret_column(99999)
 		move_to_previous_whitespace()
