@@ -1,6 +1,7 @@
 @tool
 extends EditorPlugin
 
+
 var editor_interface : EditorInterface
 var script_editor : ScriptEditor
 var scrpit_editor_base : ScriptEditorBase
@@ -25,6 +26,8 @@ var whitespace : Array = [' ','	']
 var alphanumeric : Array = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '_']
 
 var command_counter_buffer : String  = ""
+
+@onready var godot_bindings = preload("res://addons/godot-vim/godot_bindings.gd").new()
 
 var bindings = {
 	["H"]: move_left,
@@ -78,7 +81,8 @@ var bindings = {
 	["Z", "M"]: fold_all,
 	["Z", "R"]: unfold_all , 
 	["Z", "C"]: fold_line ,
-	["Z", "O"]: unfold_line
+	["Z", "O"]: unfold_line,
+	["Z", "A"]: toggle_fold
 }
 
 func _enter_tree() -> void:
@@ -109,8 +113,13 @@ func _input(event):
 		return
 
 	new_keys = key_event.as_text_keycode() # Check to not block some reserved keys
-	if new_keys in ["Ctrl+Left", "Ctrl+Right", "Ctrl+Z","Ctrl+S", "Ctrl+Shift+S", "Ctrl+Alt+S","Ctrl+F", "Shift+Tab", "Ctrl+K", "Up", "Down", "Left", "Right", "Ctrl+Shift+Q"]:
+	if godot_bindings.godot_bindings.has(new_keys):
 		return
+	if new_keys in ["Ctrl+Left", "Ctrl+Right","Shift+Tab", "Up", "Down", "Left", "Right"]:
+		return
+	
+
+	
 		
 
 	if vim_mode and event.is_pressed(): #We are in VIM mode
@@ -249,7 +258,7 @@ func move_down():
 	if command_counter_buffer != "":
 		var amount = command_counter_buffer.to_int()
 		move_line_relative(amount)
-		return
+#		return
 	move_line_relative(1)
 	update_selection()
 func move_up():
@@ -540,7 +549,8 @@ func unfold_line():
 	code_editor.unfold_line(curr_line())
 func fold_line():
 	code_editor.fold_line(curr_line())
-	
+func toggle_fold():
+	code_editor.toggle_foldable_line(curr_line())
 
 # Other
 func undo():
@@ -563,23 +573,26 @@ func search_function():
 	simulate_press(KEY_F, true)
 
 func find_next_occurance_of_word():
+	search_buffer = code_editor.get_word_under_caret()
+	var result = code_editor.search(search_buffer, 2, curr_line(), curr_column() + 1)
+	if result.x == -1 or result.y == -1:
+		return
+	if result.x == curr_column() && result.y == curr_line():
+		find_again()
+		return
 	push_jump_buffer()
-	code_editor.select_word_under_caret()
-	search_buffer = code_editor.get_selected_text()
-	code_editor.deselect()
-	var result = code_editor.search(search_buffer, 0, curr_line(), curr_column())
 	code_editor.set_caret_column(result.x)
 	code_editor.set_caret_line(result.y)
 func find_again():
 	push_jump_buffer()
 	if search_buffer != "":
-		var result =code_editor.search(search_buffer, 0, curr_line(), curr_column() + 1)
+		var result = code_editor.search(search_buffer, 2, curr_line(), curr_column() + 1)
 		code_editor.set_caret_column(result.x)
 		code_editor.set_caret_line(result.y)
 func find_again_backwards():
 	push_jump_buffer()
 	if search_buffer != "":
-		var result = code_editor.search(search_buffer, 4 , curr_line(), curr_column() -1)
+		var result = code_editor.search(search_buffer, 6 , curr_line(), curr_column() -1)
 		code_editor.set_caret_column(result.x)
 		code_editor.set_caret_line(result.y)
 func copy(full_line=false):
