@@ -1,3 +1,5 @@
+VIM bindings for Godot 4
+
 ### Supported Mode
 
     - Normal mode
