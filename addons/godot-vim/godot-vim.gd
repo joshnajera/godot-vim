@@ -135,7 +135,7 @@ var the_key_map : Array[Dictionary] = [
 var command_keys_white_list : Dictionary = {
     "Escape": 1,
     "Enter": 1,
-    "Ctrl+F": 1,
+    # "Ctrl+F": 1,  # Uncomment if you would like move-forward by page function instead of search on slash
     "Ctrl+B": 1,
     "Ctrl+U": 1,
     "Ctrl+D": 1,

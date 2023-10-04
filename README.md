@@ -1,5 +1,10 @@
 VIM bindings for Godot 4
 
+recently improved thanks to wenqiangwang
+If you would like ctrl+F to be move-forward by page then uncomment the following line
+
+#"Ctrl+F": 1, ## Uncomment if you want Ctrl+F for move forward by page
+
 ### Supported Mode
 
     - Normal mode
@@ -22,18 +27,17 @@ VIM bindings for Godot 4
 
 ### Supported operator
 
-    c, C, 
-    d, D, x, X, 
-    y, Y, 
+    c, C,
+    d, D, x, X,
+    y, Y,
     u, U, ~
 
 ### Supported actions
 
-    p, 
+    p,
     u, c-r,
     c-o, c-i,
     za, zM, zR,
     q, @, .,
     >, <
     m, '
-
