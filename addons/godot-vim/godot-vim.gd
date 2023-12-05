@@ -94,6 +94,7 @@ var the_key_map : Array[Dictionary] = [
     { "keys": ["C"],                            "type": OPERATOR, "operator": "change" },
     { "keys": ["Shift+C"],                      "type": OPERATOR_MOTION, "operator": "change", "motion": "move_to_end_of_line", "motion_args": { "inclusive": true } },
     { "keys": ["X"],                            "type": OPERATOR_MOTION, "operator": "delete", "motion": "move_by_characters", "motion_args": { "forward": true, "one_line": true }, "context": Context.NORMAL },
+    { "keys": ["S"],                            "type": OPERATOR_MOTION, "operator": "delete_and_enter_insert_mode", "motion": "move_by_characters", "motion_args": { "forward": true, "one_line": true }, "action_args": { "insert_at": "inplace" }, "context": Context.NORMAL },
     { "keys": ["X"],                            "type": OPERATOR, "operator": "delete", "context": Context.VISUAL },
     { "keys": ["Shift+X"],                      "type": OPERATOR_MOTION, "operator": "delete", "motion": "move_by_characters", "motion_args": { "forward": false } },
     { "keys": ["U"],                            "type": OPERATOR, "operator": "change_case", "operator_args": { "lower": true }, "context": Context.VISUAL },
@@ -517,6 +518,15 @@ class Command:
             s.append(c.to_lower() if c == c.to_upper() else c.to_upper())
         ed.replace_selection(''.join(s))
 
+    static func delete_and_enter_insert_mode(args: Dictionary, ed: EditorAdaptor, vim: Vim) -> void:
+        var text := ed.selected_text()
+        vim.register.set_text(text, args.get("line_wise", false))
+        ed.delete_selection()
+        var line := ed.curr_line()
+        var col := ed.curr_column()
+        if col > ed.last_column(line): # If after deletion we are beyond the end, move left
+            ed.set_curr_column(ed.last_column(line))
+        vim.current.enter_insert_mode();
 
     ###  ACTIONS
 
