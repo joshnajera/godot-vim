@@ -41,3 +41,15 @@ If you would like ctrl+F to be move-forward by page then uncomment the following
     q, @, .,
     >, <
     m, '
+
+### Override Default Godot Shortcuts with `godot-vim`'s ones
+
+Note that all non-ascii character mappings that are already mapped in the default Godot editor have to be unmapped from the Editor settings (Editor >> Editor Settings >> Shorcuts) before being usable with `godot-vim`.
+
+This currently goes for:
+
+- `Ctrl+R`
+- `Ctrl+U`
+- `Ctrl+D`
+
+See the full list of non-ascii shortucts that may already be mapped by Godot and thus wouldn't work in `godot-vim` before releasing them in Godot settings: https://github.com/joshnajera/godot-vim/blob/main/addons/godot-vim/godot-vim.gd#L135
