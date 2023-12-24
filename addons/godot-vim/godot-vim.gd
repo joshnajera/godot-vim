@@ -134,6 +134,7 @@ var the_key_map : Array[Dictionary] = [
 # The list of command keys we handle (other command keys will be handled by Godot)
 var command_keys_white_list : Dictionary = {
     "Escape": 1,
+    "Ctrl+BracketLeft": 1," # Uncomment if you would like to use Ctrl+[ as alternative hot key for leaving insert mode
     "Enter": 1,
     # "Ctrl+F": 1,  # Uncomment if you would like move-forward by page function instead of search on slash
     "Ctrl+B": 1,
@@ -1420,7 +1421,7 @@ class CommandDispatcher:
 
         vim.macro_manager.push_key(key)
 
-        if key_code == "Escape":
+        if key_code == "Escape" || key_code == "Ctrl+BracketLeft":
             input_state.clear()
             vim.macro_manager.on_command_processed({}, vim.current.insert_mode)  # From insert mode to normal mode, this marks the end of an edit command
             vim.current.enter_normal_mode()
