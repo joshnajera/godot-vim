@@ -94,6 +94,7 @@ var the_key_map : Array[Dictionary] = [
     { "keys": ["C"],                            "type": OPERATOR, "operator": "change" },
     { "keys": ["Shift+C"],                      "type": OPERATOR_MOTION, "operator": "change", "motion": "move_to_end_of_line", "motion_args": { "inclusive": true } },
     { "keys": ["X"],                            "type": OPERATOR_MOTION, "operator": "delete", "motion": "move_by_characters", "motion_args": { "forward": true, "one_line": true }, "context": Context.NORMAL },
+    { "keys": ["S"],                            "type": OPERATOR_MOTION, "operator": "change", "motion": "move_by_characters", "motion_args": { "forward": true }, "context": Context.NORMAL },
     { "keys": ["X"],                            "type": OPERATOR, "operator": "delete", "context": Context.VISUAL },
     { "keys": ["Shift+X"],                      "type": OPERATOR_MOTION, "operator": "delete", "motion": "move_by_characters", "motion_args": { "forward": false } },
     { "keys": ["U"],                            "type": OPERATOR, "operator": "change_case", "operator_args": { "lower": true }, "context": Context.VISUAL },
