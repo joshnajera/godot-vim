@@ -172,7 +172,7 @@ func _input(event) -> void:
     var key = event as InputEventKey
 
     # Don't process when not a key action
-    if key == null or !key.is_pressed() or not the_ed.has_focus():
+    if key == null or !key.is_pressed() or not the_ed or not the_ed.has_focus():
         return
 
     if key.get_keycode_with_modifiers() == KEY_NONE and key.unicode == CODE_MACRO_PLAY_END:
