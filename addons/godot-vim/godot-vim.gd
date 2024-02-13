@@ -1405,7 +1405,7 @@ class EditorAdaptor:
         return Position.new(result.y, result.x)
 
     func has_focus() -> bool:
-        return code_editor.has_focus()
+        return weakref(code_editor).get_ref() and code_editor.has_focus()
 
 
 class CommandDispatcher:
